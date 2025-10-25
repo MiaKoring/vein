@@ -9,4 +9,3 @@ public extension Binding where Value: EncryptedValueType {
         )
     }
 }
-

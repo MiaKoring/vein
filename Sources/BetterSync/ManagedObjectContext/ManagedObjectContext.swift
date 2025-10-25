@@ -157,7 +157,7 @@ public class ManagedObjectContext {
         }
     }
     
-    public func fetchSingleProperty<T: Persistable>(field: LazyField<T>) throws(MOCError) -> T? {
+    public func fetchSingleProperty<T: Persistable>(field: LazyField<T>) throws(MOCError) -> T {
         guard let key = field.key else {
             if let model = field.model {
                 throw MOCError.keyMissing(message: "raised by schema \(model.getSchema()) on property of type '\(T.self)'")

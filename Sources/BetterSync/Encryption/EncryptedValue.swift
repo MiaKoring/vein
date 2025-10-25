@@ -38,7 +38,7 @@ public struct EncryptedValue<T: Codable>: Codable {
 
 @MainActor
 @propertyWrapper
-public struct Encrypted<T: Codable>: EncryptedValueType {
+public class Encrypted<T: Codable>: EncryptedValueType {
     public typealias WrappedType = T
     private let provider: EncryptionProvider?
     public var encryptedData: Data
@@ -46,7 +46,7 @@ public struct Encrypted<T: Codable>: EncryptedValueType {
     public var wrappedValue: T {
         get {
             let result = try! read()
-            print("decrypted")
+            //print("decrypted")
             return result
         }
         set {
@@ -60,7 +60,7 @@ public struct Encrypted<T: Codable>: EncryptedValueType {
         return try JSONDecoder().decode(T.self, from: provider.decrypt(encryptedData))
     }
     
-    private mutating func write(_ newValue: T) throws {
+    private func write(_ newValue: T) throws {
         let provider = provider ?? EncryptionManager.instance
         let encoded = try JSONEncoder().encode(newValue)
         encryptedData = try provider.encrypt(encoded)
@@ -80,15 +80,15 @@ public struct Encrypted<T: Codable>: EncryptedValueType {
             fatalError(error.localizedDescription)
         }
     }
-}
-
-extension Encrypted: Persistable, ColumnType where WrappedType: Persistable {
-    public init?(fromPersistent representation: Data) {
+    
+    required public init?(fromPersistent representation: Data) {
         self.encryptedData = representation
         self.provider = nil
     }
-    
-    public static func decode(sqliteValue: SqliteValue) throws(MOCError) -> Encrypted<T> {
+}
+
+extension Encrypted: Persistable, ColumnType where WrappedType: Persistable {
+    public static func decode(sqliteValue: SqliteValue) throws(MOCError) -> Self {
         let data = try Data.decode(sqliteValue: sqliteValue)
         return Self(fromPersistent: data)!
     }

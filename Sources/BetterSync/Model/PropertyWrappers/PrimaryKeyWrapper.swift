@@ -8,7 +8,6 @@ public struct PrimaryKey: PersistedField {
     
     public var wrappedValue: UUID? {
         didSet {
-            print("id did set")
         }
     }
     

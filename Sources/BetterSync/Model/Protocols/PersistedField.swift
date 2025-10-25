@@ -5,7 +5,7 @@ import Foundation
 public protocol PersistedField {
     associatedtype WrappedType: Persistable
     var key: String? { get }
-    var wrappedValue: WrappedType { get }
+    var wrappedValue: WrappedType { get set }
     var isLazy: Bool { get }
     
     static var sqliteTypeName: SQLiteTypeName { get }

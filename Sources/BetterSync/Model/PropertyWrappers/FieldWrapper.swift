@@ -1,9 +1,12 @@
 import Foundation
+#if canImport(SwiftUI)
+import SwiftUI
+#endif
 
 @MainActor
 @propertyWrapper
 public class LazyField<T: Persistable>: PersistedField {
-    public typealias WrappedType = T?
+    public typealias WrappedType = T
     
     public var key: String?
     public weak var model: PersistentModel?
@@ -18,7 +21,24 @@ public class LazyField<T: Persistable>: PersistedField {
         T.sqliteTypeName
     }
     
-    public var wrappedValue: T? {
+    #if canImport(SwiftUI)
+    public var projectedValue: Binding<WrappedType> {
+        Binding<WrappedType> (
+            get: {
+                self.wrappedValue
+            },
+            set: { newValue in
+                self.wrappedValue = newValue
+            }
+        )
+    }
+    #endif
+    
+    public var isPopulated: Bool {
+        store != nil
+    }
+    
+    public var wrappedValue: T {
         get {
             if let store {
                 return store
@@ -30,7 +50,7 @@ public class LazyField<T: Persistable>: PersistedField {
                     return result
                 } catch { fatalError(error.localizedDescription) }
             }
-            return nil
+            fatalError()
         }
         set {
             if let context = model?.context {
@@ -46,7 +66,7 @@ public class LazyField<T: Persistable>: PersistedField {
         }
     }
     
-    public init(wrappedValue: T?) {
+    public init(wrappedValue: T) {
         self.store = wrappedValue
         self.key = nil
     }
