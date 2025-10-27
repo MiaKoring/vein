@@ -11,11 +11,11 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .library(
             name: "BetterSync",
-            targets: ["BetterSync", "BetterSyncMacros"]
+            targets: ["BetterSync"]
         ),
         .library(
             name: "BetterSyncSwiftUI",
-            targets: ["BetterSync", "BetterSyncSwiftUI"]
+            targets: ["BetterSyncSwiftUI", "BetterSyncMacros"]
         )
     ],
     dependencies: [

@@ -14,6 +14,8 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
             throw MacroError.onlyApplicableToClasses
         }
         
+        let className = classDecl.name.text.trimmingCharacters(in: .whitespacesAndNewlines)
+        
         let lazyFieldVariables: [VariableDeclSyntax] = classDecl.memberBlock.members
             .compactMap { member in
                 guard let varDecl = member.decl.as(VariableDeclSyntax.self) else {
@@ -106,7 +108,9 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
 """
     @PrimaryKey
     var id: UUID?
-
+    
+    let objectWillChange = PassthroughSubject<Void, Never>()
+    
     required init(id: UUID, fields: [String: BetterSync.SqliteValue]) {
         self.id = id
         \(eagerVarInit)
@@ -145,25 +149,23 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
         conformingTo protocols: [SwiftSyntax.TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        
         guard let classDecl = declaration.as(ClassDeclSyntax.self) else {
             throw MacroError.onlyApplicableToClasses
         }
         
-        let className = classDecl.name.text
-        
-        var namespace: String?
-        
-        /*let arg = node.as(MacroExpansionExprSyntax.self)?.arguments.first?.expression
-        let literalValue = arg?.as(StringLiteralExprSyntax.self)?.representedLiteralValue
-        
-        namespace = literalValue*/
-        
-        namespace?.append(".")
-        
+        #if canImport(SwiftUI)
         let extensionDecl = try ExtensionDeclSyntax(
-            "extension \(raw: namespace ?? "")\(raw: className): PersistentModel, @unchecked Sendable { }"
+            """
+            extension \(raw: type): PersistentModel, @unchecked Sendable { }
+            @MainActor
+            extension \(raw: type): ObservableObject { }
+            """
         )
+        #else
+        let extensionDecl = try ExtensionDeclSyntax(
+            "extension \(raw: type): PersistentModel, @unchecked Sendable { }"
+        )
+        #endif
         
         return [extensionDecl]
     }

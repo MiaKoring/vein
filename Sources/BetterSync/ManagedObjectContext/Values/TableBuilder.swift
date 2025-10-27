@@ -46,8 +46,4 @@ public struct TableBuilder {
             schema(t)
         })
     }
-    
-    public func run() {
-        
-    }
 }

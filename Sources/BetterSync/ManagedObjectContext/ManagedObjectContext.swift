@@ -39,6 +39,42 @@ public actor ManagedObjectContext {
         return BetterSync.TableBuilder(self, named: name)
     }
     
+    public func insertInBackground<M: PersistentModel>(_ model: M) throws(MOCError) {
+        do {
+            guard model.context == nil else {
+                if let id = model.id {
+                    throw MOCError.insertManagedModel(message: "raised by model of type '\(M.self)' with id \(id.uuidString)")
+                } else {
+                    throw MOCError.idMissing(message: "raised by model of Type '\(M.self)'")
+                }
+            }
+            
+            let table = Table(model.getSchema())
+            try connection.transaction {
+                try connection.run(table.insert(model.fields.map {
+                    return $0.wrappedValue.asPersistentRepresentation.sqliteValue.setter(withKey: $0.instanceKey, andTypeName: $0.wrappedValue.sqliteTypeName)
+                }))
+                
+                if
+                    let row = try connection.pluck(table.order(Expression<Int64>("rowid").desc).limit(1)),
+                    let id = UUID(uuidString: row[Expression<String>("id")])
+                {
+                    model.id = id
+                    model.context = self
+                } else {
+                    throw MOCError.idAfterCreation(message: "raised by Model of Type '\(M.self)'")
+                }
+            }
+            scheduleActorNotification(model)
+        } catch let error as ManagedObjectContextError { throw error }
+        catch let error as SQLite.Result {
+            throw error.parse()
+        } catch {
+            throw .other(message: error.localizedDescription)
+        }
+    }
+    
+    @MainActor
     public func insert<M: PersistentModel>(_ model: M) throws(MOCError) {
         do {
             guard model.context == nil else {
@@ -64,6 +100,9 @@ public actor ManagedObjectContext {
                 } else {
                     throw MOCError.idAfterCreation(message: "raised by Model of Type '\(M.self)'")
                 }
+            }
+            if let query = registeredQueries["\(M.self)"] as? QueryObserver<M> {
+                scheduleNotification(model)
             }
         } catch let error as ManagedObjectContextError { throw error }
         catch let error as SQLite.Result {
@@ -173,4 +212,105 @@ public actor ManagedObjectContext {
             }
         }
     }
+    
+    @MainActor
+    private var registeredQueries = [String: AnyObject]()
+    
+    @MainActor
+    public func registerQuery<M: PersistentModel>(_ observer: QueryObserver<M>) {
+        registeredQueries["\(M.self)"] = observer
+    }
+    
+    @MainActor
+    private var pendingNotifications: [String: [AnyObject]] = [:]
+    @MainActor
+    private var notificationTask: Task<Void, Never>?
+    
+    private nonisolated(unsafe) var pendingActorNotifications: [String: [AnyObject]] = [:]
+    private var actorNotificationTask: Task<Void, Never>?
+    
+    private func scheduleActorNotification<M: PersistentModel>(_ model: M) {
+        let key = "\(M.self)"
+        pendingActorNotifications[key, default: []].append(model)
+    }
+    @MainActor
+    private func flushActorNotifications() async {
+        let notifications = await pendingActorNotifications
+        pendingActorNotifications.removeAll()
+        for (key, models) in notifications {
+            if let query = registeredQueries[key] as? AnyQueryObserver {
+                query.appendAny(models)
+            }
+        }
+    }
+    
+    @MainActor
+    private func scheduleNotification<M: PersistentModel>(_ model: M) {
+        let key = "\(M.self)"
+        pendingNotifications[key, default: []].append(model)
+        notificationTask?.cancel()
+        notificationTask = Task {
+            try? await Task.sleep(for: .milliseconds(10))
+            flushNotifications()
+        }
+    }
+    
+    @MainActor
+    private func flushNotifications() {
+        let notifications = pendingNotifications
+        pendingNotifications.removeAll()
+        for (key, models) in notifications {
+            if let query = registeredQueries[key] as? AnyQueryObserver {
+                query.appendAny(models)
+            }
+        }
+    }
+    
+    public func updateAfterCompletion(with block: () async -> Void) async {
+        await block()
+        await flushActorNotifications()
+    }
+    
+    public func batchInsert<M: PersistentModel>(_ models: [M]) async throws {
+        for model in models {
+            try insertInBackground(model)
+        }
+        await flushActorNotifications()
+    }
+    
+    public func insertAndFlush<M: PersistentModel>(_ model: M) async throws {
+        try insertInBackground(model)
+        await flushActorNotifications()
+    }
 }
+
+internal protocol AnyQueryObserver: AnyObject {
+    func appendAny(_ models: [AnyObject])
+}
+
+#if canImport(Combine)
+import Combine
+
+public final class QueryObserver<M: PersistentModel>: ObservableObject, @unchecked Sendable, @MainActor AnyQueryObserver {
+    typealias ModelType = M
+    public let objectWillChange = PassthroughSubject<Void, Never>()
+    
+    @MainActor
+    public var results: [M]? = nil
+    
+    
+    @MainActor
+    public func append(_ model: [M]) {
+        results?.append(contentsOf: model)
+        objectWillChange.send()
+    }
+    
+    @MainActor
+    internal func appendAny(_ models: [AnyObject]) {
+        guard let typedModel = models as? [M] else { return }
+        append(typedModel)
+    }
+    
+    public init() {}
+}
+#endif

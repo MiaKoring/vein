@@ -1,7 +1,7 @@
 import Foundation
 
 @propertyWrapper
-public nonisolated struct PrimaryKey: PersistedField, @unchecked Sendable {
+public struct PrimaryKey: PersistedField, @unchecked Sendable {
     public typealias WrappedType = UUID?
     
     public let key: String? = "id"

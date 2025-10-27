@@ -1,5 +1,25 @@
 import Foundation
+#if canImport(SwiftUI)
+@_exported import Combine 
+#endif
 
+#if canImport(SwiftUI)
+public protocol PersistentModel: class, Sendable {
+    associatedtype SchemaMigration: ModelSchemaMigration
+    
+    var objectWillChange: PassthroughSubject<Void, Never> { get }
+    
+    static var schema: String { get }
+    var id: UUID? { get set }
+    var context: ManagedObjectContext? { get set }
+    
+    func getSchema() -> String
+    var fields: [PersistedField] { get }
+    static var fieldInformation: [FieldInformation] { get }
+    
+    init(id: UUID, fields: [String: SqliteValue])
+}
+#else
 public protocol PersistentModel: class, Sendable {
     associatedtype SchemaMigration: ModelSchemaMigration
     
@@ -13,6 +33,7 @@ public protocol PersistentModel: class, Sendable {
     
     init(id: UUID, fields: [String: SqliteValue])
 }
+#endif
 
 struct AnyPersistentModelType: Hashable {
     let type: PersistentModel.Type
@@ -33,7 +54,7 @@ struct AnyPersistentModelType: Hashable {
 }
 
 public protocol ModelSchemaMigration: Sendable {
-    nonisolated func prepare(in context: ManagedObjectContext)
+    nonisolated func prepare(in context: ManagedObjectContext) async throws -> Void
     init()
 }
 

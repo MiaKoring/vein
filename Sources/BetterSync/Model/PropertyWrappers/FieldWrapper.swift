@@ -62,6 +62,9 @@ public final class LazyField<T: Persistable>: PersistedField, @unchecked Sendabl
                     fatalError(error.localizedDescription)
                 }
             }
+            #if canImport(SwiftUI)
+            model?.objectWillChange.send()
+            #endif
         }
     }
     
@@ -115,6 +118,9 @@ public final class Field<T: Persistable>: PersistedField, @unchecked Sendable {
         }
         set {
             store = newValue
+#if canImport(SwiftUI)
+            model?.objectWillChange.send()
+#endif
         }
     }
     

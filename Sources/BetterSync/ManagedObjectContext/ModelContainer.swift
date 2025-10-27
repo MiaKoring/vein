@@ -1,8 +1,10 @@
-public struct ModelContainer {
-    private var migration: SchemaMigrationPlan.Type
-    private var managedModels: Set<AnyPersistentModelType>
-    private var path: String
-    public var context: ManagedObjectContext
+import SwiftUI
+
+public final class ModelContainer: Sendable {
+    private let migration: SchemaMigrationPlan.Type
+    private let managedModels: Set<AnyPersistentModelType>
+    private let path: String
+    public let context: ManagedObjectContext
     
     public init(
         models: PersistentModel.Type...,
@@ -15,7 +17,7 @@ public struct ModelContainer {
         self.path = path
     }
     
-    public func migrate() throws {
+    package func migrate() async throws {
         guard
             let latestSchema = migration.schemas.sorted(by: {
                 $0.version > $1.version
@@ -31,7 +33,7 @@ public struct ModelContainer {
                 continue
             }
             let migration: ModelSchemaMigration = model.createMigration()
-            try migration.prepare(in: context)
+            try await migration.prepare(in: context)
         }
     }
 }
