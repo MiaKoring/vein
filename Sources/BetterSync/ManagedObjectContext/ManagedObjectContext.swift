@@ -50,9 +50,9 @@ public actor ManagedObjectContext {
                 }
             }
             
-            let table = Table(model.getSchema())
+            let table = Table(model._getSchema())
             try connection.transaction {
-                try connection.run(table.insert(model.fields.map {
+                try connection.run(table.insert(model._fields.map {
                     return $0.wrappedValue.asPersistentRepresentation.sqliteValue.setter(withKey: $0.instanceKey, andTypeName: $0.wrappedValue.asPersistentRepresentation.sqliteTypeName)
                 }))
                 
@@ -86,9 +86,9 @@ public actor ManagedObjectContext {
                 }
             }
             
-            let table = Table(model.getSchema())
+            let table = Table(model._getSchema())
             try connection.transaction {
-                try connection.run(table.insert(model.fields.map {
+                try connection.run(table.insert(model._fields.map {
                     return $0.wrappedValue.asPersistentRepresentation.sqliteValue.setter(withKey: $0.instanceKey, andTypeName: $0.wrappedValue.asPersistentRepresentation.sqliteTypeName)
                 }))
                 
@@ -126,10 +126,10 @@ public actor ManagedObjectContext {
         }
     }
     
-    public nonisolated func fetchAll<T: PersistentModel>(_ modelType: T.Type) throws(MOCError) -> [T] {
+    public nonisolated func fetchAll<T: PersistentModel>(_ predicate: PredicateBuilder<T>) throws(MOCError) -> [T] {
         do {
-            let table = Table(modelType.schema)
-            let eagerLoadedFields = modelType.fieldInformation.eagerLoaded
+            let table = Table(T.schema).filter(predicate.finalize())
+            let eagerLoadedFields = T._fieldInformation.eagerLoaded
             var fieldsToLoad = eagerLoadedFields.map { $0.expressible }
             fieldsToLoad.append(Expression<String>("id"))
             let select = table.select(distinct: fieldsToLoad)
@@ -169,7 +169,7 @@ public actor ManagedObjectContext {
         typealias T = Field.WrappedType
         guard let key = field.key else {
             if let model = field.model {
-                throw MOCError.keyMissing(message: "raised by schema \(model.getSchema()) on property of type '\(T.self)'")
+                throw MOCError.keyMissing(message: "raised by schema \(model._getSchema()) on property of type '\(T.self)'")
             } else {
                 throw MOCError.keyMissing(message: "raised by unknown schema on property of type '\(T.self)'")
             }
@@ -179,7 +179,7 @@ public actor ManagedObjectContext {
             throw MOCError.idMissing(message: "raised by model of Type '\(model.self)'")
         }
         
-        let table = Table(model.getSchema()).filter(Expression<Int64>("id") == id)
+        let table = Table(model._getSchema()).filter(Expression<Int64>("id") == id)
         let select = table.select(distinct: [field.expressible]).limit(1)
         
         do {
@@ -222,31 +222,29 @@ public actor ManagedObjectContext {
     }
     
     @MainActor
-    private var registeredQueries = [String: AnyQueryObserver]()
+    private var registeredQueries = [Int: AnyQueryObserver]()
     
     @MainActor
-    public func getOrCreateQueryObserver(_ key: String, createWith block: @escaping () -> AnyQueryObserver) -> AnyQueryObserver {
+    public func getOrCreateQueryObserver(_ key: Int, createWith block: @escaping () -> AnyQueryObserver) -> AnyQueryObserver {
         if let observer = registeredQueries[key] {
             return observer
         }
         let newObserver = block()
         registeredQueries[key] = newObserver
-        print("registered new observer")
         return newObserver
     }
     
     @MainActor
-    private var pendingNotifications: [String: [AnyObject]] = [:]
+    private var pendingNotifications: [Int: [AnyObject]] = [:]
     
     @MainActor
     private var notificationTask: Task<Void, Never>?
     
-    private nonisolated(unsafe) var pendingActorNotifications: [String: [AnyObject]] = [:]
+    private nonisolated(unsafe) var pendingActorNotifications: [Int: [AnyObject]] = [:]
     private var actorNotificationTask: Task<Void, Never>?
     
     private func scheduleActorNotification<M: PersistentModel>(_ model: M) {
-        let key = "\(M.self)"
-        pendingActorNotifications[key, default: []].append(model)
+        pendingActorNotifications[PredicateBuilder<M>().hashValue, default: []].append(model)
     }
     
     @MainActor
@@ -262,8 +260,7 @@ public actor ManagedObjectContext {
     
     @MainActor
     private func scheduleNotification<M: PersistentModel>(_ model: M) {
-        let key = "\(M.self)"
-        pendingNotifications[key, default: []].append(model)
+        pendingNotifications[PredicateBuilder<M>().hashValue, default: []].append(model)
         notificationTask?.cancel()
         notificationTask = Task {
             try? await Task.sleep(for: .milliseconds(10))
@@ -303,6 +300,10 @@ public actor ManagedObjectContext {
     
     public nonisolated var trackedObjectCount: Int {
         identityMap.getTrackedCount()
+    }
+    
+    public nonisolated func compactIdentityMap() {
+        identityMap.compact()
     }
 }
 
@@ -359,10 +360,24 @@ private nonisolated final class ThreadSafeIdentityMap {
     private static func key<T: PersistentModel>(_ type: T.Type) -> ObjectIdentifier {
         ObjectIdentifier(type)
     }
+    
+    func compact() {
+        lock.withLock {
+            for (type, var references) in cache {
+                references = references.filter { _, box in box.isDeallocated }
+                if references.isEmpty {
+                    cache.removeValue(forKey: type)
+                } else {
+                    cache[type] = references
+                }
+            }
+        }
+    }
 }
 
 private struct WeakModel {
     private weak var wrappedValue: AnyObject?
+    var isDeallocated: Bool { wrappedValue.isNil }
     
     init(wrappedValue: AnyObject? = nil) {
         self.wrappedValue = wrappedValue

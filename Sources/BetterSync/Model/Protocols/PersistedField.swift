@@ -23,7 +23,7 @@ extension PersistedField {
         guard let model else {
             fatalError(MOCError.modelReference(message: "raised by Field property of Type '\(WrappedType.self)'").localizedDescription)
         }
-        return model.getSchema()
+        return model._getSchema()
     }
     
     var instanceID: Int64 {

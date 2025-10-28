@@ -21,6 +21,10 @@ extension ColumnType {
 }
 
 extension Int16: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Int64 { Int64(self) }
+    
+    public typealias SQLiteType = Int64
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -48,6 +52,10 @@ extension Int16: Persistable, ColumnType {
 }
 
 extension Int32: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Int64 { Int64(self) }
+    
+    public typealias SQLiteType = Int64
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -75,6 +83,10 @@ extension Int32: Persistable, ColumnType {
 }
 
 extension Int64: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Int64 { self }
+    
+    public typealias SQLiteType = Int64
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -99,6 +111,10 @@ extension Int64: Persistable, ColumnType {
 }
 
 extension Double: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Double  { self }
+    
+    public typealias SQLiteType = Double
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -125,6 +141,10 @@ extension Double: Persistable, ColumnType {
 }
 
 extension Float: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Double  { Double(self) }
+    
+    public typealias SQLiteType = Double
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -151,6 +171,10 @@ extension Float: Persistable, ColumnType {
 }
 
 extension Bool: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Int64 { self ? 1: 0 }
+    
+    public typealias SQLiteType = Int64
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -180,6 +204,9 @@ extension Bool: Persistable, ColumnType {
 }
 
 extension String: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: String { self }
+    public typealias SQLiteType = String
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -206,6 +233,10 @@ extension String: Persistable, ColumnType {
 }
 
 extension URL: Persistable {
+    public var sqliteTypeRepresentation: String { absoluteString }
+    
+    public typealias SQLiteType = String
+    
     public typealias PersistentRepresentation = String
     
     public var asPersistentRepresentation: String { absoluteString }
@@ -221,6 +252,10 @@ extension URL: Persistable {
 }
 
 extension Data: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: Data { self }
+    
+    public typealias SQLiteType = Data
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -247,6 +282,10 @@ extension Data: Persistable, ColumnType {
 }
 
 extension Date: Persistable, ColumnType {
+    public var sqliteTypeRepresentation: String { ISO8601Format(Date.sqliteFormatStyle) }
+    
+    public typealias SQLiteType = String
+    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }
@@ -311,7 +350,7 @@ extension UUID: Persistable, ColumnType {
     }
 }
 
-extension Optional: Persistable, ColumnType where Wrapped: Persistable {
+extension Optional: Persistable, ColumnType, Equatable where Wrapped: Persistable {    
     public typealias PersistentRepresentation = Self
     
     public var asPersistentRepresentation: Self { self }

@@ -34,6 +34,92 @@ public enum SQLiteTypeName: Sendable, Hashable {
                 return inner.castTypeString
         }
     }
+    
+    func fieldIsEqualToExpression(key: String, value: SQLite.Value?) -> SQLite.Expression<Bool?> {
+        switch self {
+            case .integer:
+                Expression<Bool?>(Expression<Int64>(key) == value as! Int64)
+            case .real:
+                Expression<Bool?>(Expression<Double>(key) == value as! Double)
+            case .text:
+                Expression<Bool?>(Expression<String>(key) == value as! String)
+            case .blob:
+                Expression<Bool?>(Expression<Data>(key) == value as! Data)
+            case .null(let typeName):
+                switch Self.notNull(typeName) {
+                    case .integer:
+                        Expression<Bool?>(Expression<Int64?>(key) == value as! Int64?)
+                    case .real:
+                        Expression<Bool?>(Expression<Double?>(key) == value as! Double?)
+                    case .text:
+                        Expression<Bool?>(Expression<String?>(key) == value as! String?)
+                    case .blob:
+                        Expression<Bool?>(Expression<Data?>(key) == value as! Data?)
+                    default:
+                        Expression<Bool?>(value: true)
+                }
+        }
+    }
+    
+    func fieldIsBiggerToExpression(key: String, value: SQLite.Value?) -> SQLite.Expression<Bool?> {
+        switch self {
+            case .integer:
+                Expression<Bool?>(Expression<Int64>(key) > value as! Int64)
+            case .real:
+                Expression<Bool?>(Expression<Double>(key) > value as! Double)
+            case .text:
+                Expression<Bool?>(Expression<String>(key) > value as! String)
+            case .blob:
+                Expression<Bool?>(value: nil)
+            case .null(let typeName):
+                Expression<Bool?>(value: nil)
+        }
+    }
+    
+    func fieldIsSmallerToExpression(key: String, value: SQLite.Value?) -> SQLite.Expression<Bool?> {
+        switch self {
+            case .integer:
+                Expression<Bool?>(Expression<Int64>(key) < value as! Int64)
+            case .real:
+                Expression<Bool?>(Expression<Double>(key) < value as! Double)
+            case .text:
+                Expression<Bool?>(Expression<String>(key) < value as! String)
+            case .blob:
+                Expression<Bool?>(value: nil)
+            case .null(let typeName):
+                Expression<Bool?>(value: nil)
+        }
+    }
+    
+    func fieldIsSmallerOrEqualToExpression(key: String, value: SQLite.Value?) -> SQLite.Expression<Bool?> {
+        switch self {
+            case .integer:
+                Expression<Bool?>(Expression<Int64>(key) <= value as! Int64)
+            case .real:
+                Expression<Bool?>(Expression<Double>(key) <= value as! Double)
+            case .text:
+                Expression<Bool?>(Expression<String>(key) <= value as! String)
+            case .blob:
+                Expression<Bool?>(value: nil)
+            case .null(let typeName):
+                Expression<Bool?>(value: nil)
+        }
+    }
+    
+    func fieldIsBiggerOrEqualToExpression(key: String, value: SQLite.Value?) -> SQLite.Expression<Bool?> {
+        switch self {
+            case .integer:
+                Expression<Bool?>(Expression<Int64>(key) >= value as! Int64)
+            case .real:
+                Expression<Bool?>(Expression<Double>(key) >= value as! Double)
+            case .text:
+                Expression<Bool?>(Expression<String>(key) >= value as! String)
+            case .blob:
+                Expression<Bool?>(value: nil)
+            case .null(let typeName):
+                Expression<Bool?>(value: nil)
+        }
+    }
 }
 
 public enum SQLiteValue: Sendable, Hashable {
@@ -43,7 +129,38 @@ public enum SQLiteValue: Sendable, Hashable {
     case blob(Data)
     case null
     
-    package init(typeName: SQLiteTypeName, key: String, row: SQLite.Row) {
+    var intval: Int {
+        switch self {
+            case .integer(let int64):
+                1
+            case .real(let double):
+                2
+            case .text(let string):
+                3
+            case .blob(let data):
+                4
+            case .null:
+                5
+        }
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(self.intval)
+        switch self {
+            case .integer(let int64):
+                hasher.combine(int64.hashValue)
+            case .real(let double):
+                hasher.combine(double.hashValue)
+            case .text(let string):
+                hasher.combine(string.hashValue)
+            case .blob(let data):
+                hasher.combine(data.hashValue)
+            case .null:
+                hasher.combine("NULL".hashValue)
+        }
+    }
+    
+    init(typeName: SQLiteTypeName, key: String, row: SQLite.Row) {
         if typeName.isNull {
             switch SQLiteTypeName.notNull(typeName) {
                 case .integer:
@@ -82,6 +199,35 @@ public enum SQLiteValue: Sendable, Hashable {
                 self = .blob(row[Expression<Data>(key)])
             case .null:
                 fatalError("unexpectedly found SQLiteTypeName.null in SQLiteValue.init")
+        }
+    }
+    
+    func underlyingValue(withTypeName typeName: SQLiteTypeName) -> SQLite.Value? {
+        if typeName.isNull {
+            switch self {
+                case .integer(let int64):
+                    return Int64?.none
+                case .real(let double):
+                    return Double?.none
+                case .text(let string):
+                    return String?.none
+                case .blob(let data):
+                    return Data?.none
+                case .null:
+                    fatalError("found null while expecting not null")
+            }
+        }
+        switch self {
+            case .integer(let int64):
+                return int64
+            case .real(let double):
+                return double
+            case .text(let string):
+                return string
+            case .blob(let data):
+                return data
+            case .null:
+                fatalError("found null while expecting not null")
         }
     }
 }

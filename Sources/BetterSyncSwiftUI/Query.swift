@@ -24,8 +24,8 @@ public struct Query<M: PersistentModel>: DynamicProperty {
         }
     }
     
-    public init(name: String) {
-        self._queryObserver = StateObject(wrappedValue: QueryObserver<M>(name: name))
+    public init(_ predicate: PredicateBuilder<M> = PredicateBuilder<M>()) {
+        self._queryObserver = StateObject(wrappedValue: QueryObserver<M>(predicate))
     }
 }
 
@@ -37,7 +37,7 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     
     fileprivate var primaryObserver: QueryObserver<M>?
     
-    private let name: String
+    let predicate: PredicateBuilder<M>
     
     @MainActor
     public var results: [M]? = nil
@@ -46,7 +46,9 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     func initialize(with context: ManagedObjectContext) {
         guard results == nil && primaryObserver == nil else { return }
         
-        let primary = context.getOrCreateQueryObserver("\(M.self)", createWith: { return self }) as! Self
+        let primary = context.getOrCreateQueryObserver(predicate.hashValue, createWith: {
+            return self
+        }) as! Self
         
         if primary !== self {
             self.primaryObserver = primary
@@ -62,7 +64,7 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     
     @MainActor
     private func fetchInitialResults(with context: ManagedObjectContext) {
-        let initialResults = try! context.fetchAll(M.self)
+        let initialResults = try! context.fetchAll(predicate)
         self.results = initialResults
     }
     
@@ -83,8 +85,8 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
         append(typedModel)
     }
     
-    public init(name: String) {
-        self.name = name
+    public init(_ predicate: PredicateBuilder<M>) {
+        self.predicate = predicate
     }
 }
 

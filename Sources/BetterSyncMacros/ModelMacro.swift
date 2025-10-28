@@ -74,6 +74,7 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
         
         var fieldBodys = [String]()
         var fieldAccessorBodies = [String]()
+        var keyPathToKeyBodys = [String]()
         
         fieldAccessorBodies.append("self._id")
         
@@ -81,6 +82,7 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
             fieldBodys.append("self._\(name).model = self")
             fieldBodys.append("self._\(name).key = \"\(name)\"")
             fieldAccessorBodies.append("self._\(name)")
+            keyPathToKeyBodys.append("case \\Self.\(name): \"\(name)\"")
         }
         
         fieldBodys.append("self._id.model = self")
@@ -103,6 +105,7 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
         })
         
         let fieldInformationString = fieldInformation.joined(separator: ",\n        ")
+        let keyPathToKeyString = keyPathToKeyBodys.joined(separator: "\n            ")
         
         let body =
 """
@@ -123,20 +126,27 @@ public struct ModelMacro: MemberMacro, ExtensionMacro {
         \(fieldSetup)
     }
 
-    func getSchema() -> String {
+    func _getSchema() -> String {
         return Self.schema
     }
 
     var context: BetterSync.ManagedObjectContext? = nil
-    var fields: [any BetterSync.PersistedField] {
+    var _fields: [any BetterSync.PersistedField] {
         [
             \(fieldAccessorSetup)
         ]
     }
 
-    static var fieldInformation: [FieldInformation] = [
+    static var _fieldInformation: [FieldInformation] = [
         \(fieldInformationString)
     ]
+
+    public static func _key<V: Persistable>(forPath keyPath: KeyPath<\(className), V>) -> String {
+        switch keyPath {
+            \(keyPathToKeyString)
+            default: ""
+        }
+    }
 """
         
         return [DeclSyntax(stringLiteral: body)]

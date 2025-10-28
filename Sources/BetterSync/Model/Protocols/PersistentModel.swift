@@ -13,9 +13,11 @@ public protocol PersistentModel: class, Sendable {
     var id: Int64? { get set }
     var context: ManagedObjectContext? { get set }
     
-    func getSchema() -> String
-    var fields: [PersistedField] { get }
-    static var fieldInformation: [FieldInformation] { get }
+    func _getSchema() -> String
+    var _fields: [PersistedField] { get }
+    static var _fieldInformation: [FieldInformation] { get }
+    
+    static func _key<V: Persistable>(forPath keyPath: KeyPath<Self, V>) -> String
     
     init(id: Int64, fields: [String: SQLiteValue])
 }

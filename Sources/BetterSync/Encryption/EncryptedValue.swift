@@ -87,6 +87,12 @@ public class Encrypted<T: Codable>: EncryptedValueType {
 }
 
 extension Encrypted: Persistable, ColumnType where WrappedType: Persistable {
+    public var sqliteTypeRepresentation: Data {
+        encryptedData
+    }
+    
+    public typealias SQLiteType = Data
+    
     public static func decode(sqliteValue: SQLiteValue) throws(MOCError) -> Self {
         let data = try Data.decode(sqliteValue: sqliteValue)
         return Self(fromPersistent: data)!
