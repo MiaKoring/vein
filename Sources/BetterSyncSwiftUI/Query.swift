@@ -12,20 +12,20 @@ public struct Query<M: PersistentModel>: DynamicProperty {
     
     public var wrappedValue: [M] {
         if let results = queryObserver.results {
-            return results
+            return results.sorted(by: { $0.id! < $1.id! })
         }
         do {
             if queryObserver.results == nil && queryObserver.primaryObserver == nil {
                 queryObserver.initialize(with: context)
             }
-            return queryObserver.primaryObserver?.results ?? queryObserver.results ?? []
+            return (queryObserver.primaryObserver?.results ?? queryObserver.results ?? []).sorted(by: { $0.id! < $1.id! })
         } catch {
             fatalError(error.localizedDescription)
         }
     }
     
-    public init(_ predicate: PredicateBuilder<M> = PredicateBuilder<M>()) {
-        self._queryObserver = StateObject(wrappedValue: QueryObserver<M>(predicate))
+    public init(_ predicate: M._PredicateHelper = M._PredicateHelper()) {
+        self._queryObserver = StateObject(wrappedValue: QueryObserver<M>(predicate._builder()))
     }
 }
 
@@ -39,16 +39,22 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     
     let predicate: PredicateBuilder<M>
     
+    package var usedPredicate: AnyPredicateBuilder { predicate }
+    
     @MainActor
-    public var results: [M]? = nil
+    package var results: [M]? = nil
     
     @MainActor
     func initialize(with context: ManagedObjectContext) {
         guard results == nil && primaryObserver == nil else { return }
         
-        let primary = context.getOrCreateQueryObserver(predicate.hashValue, createWith: {
-            return self
-        }) as! Self
+        let primary = context.getOrCreateQueryObserver(
+            for: M.typeIdentifier,
+            predicate.hashValue,
+            createWith: {
+                return self
+            }
+        ) as! Self
         
         if primary !== self {
             self.primaryObserver = primary
@@ -70,8 +76,8 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     
     
     @MainActor
-    package func append(_ model: [M]) {
-        results?.append(contentsOf: model)
+    package func append(_ models: [M]) {
+        results?.append(contentsOf: models.filter{ predicate.doesMatch($0) })
         // there is only one Query instance kept in the context for the same filter.
         // this triggers view updates on any other Query oberservers using the registered
         // Query as their source
@@ -81,11 +87,11 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     
     @MainActor
     package func appendAny(_ models: [AnyObject]) {
-        guard let typedModel = models as? [M] else { return }
-        append(typedModel)
+        guard let typedModels = models as? [M] else { return }
+        append(typedModels)
     }
     
-    public init(_ predicate: PredicateBuilder<M>) {
+    package init(_ predicate: PredicateBuilder<M>) {
         self.predicate = predicate
     }
     

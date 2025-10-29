@@ -6,6 +6,7 @@ import Foundation
 #if canImport(SwiftUI)
 public protocol PersistentModel: class, Sendable {
     associatedtype SchemaMigration: ModelSchemaMigration
+    associatedtype _PredicateHelper: PredicateConstructor where _PredicateHelper.Model == Self
     
     var objectWillChange: PassthroughSubject<Void, Never> { get }
     
@@ -16,8 +17,6 @@ public protocol PersistentModel: class, Sendable {
     func _getSchema() -> String
     var _fields: [PersistedField] { get }
     static var _fieldInformation: [FieldInformation] { get }
-    
-    static func _key<V: Persistable>(forPath keyPath: KeyPath<Self, V>) -> String
     
     init(id: Int64, fields: [String: SQLiteValue])
 }
@@ -36,6 +35,11 @@ public protocol PersistentModel: class, Sendable {
     init(id: UUID, fields: [String: SQLiteValue])
 }
 #endif
+
+extension PersistentModel {
+    public static var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
+    public var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
+}
 
 struct AnyPersistentModelType: Hashable {
     let type: PersistentModel.Type
