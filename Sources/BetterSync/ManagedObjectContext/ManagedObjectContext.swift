@@ -206,6 +206,39 @@ public actor ManagedObjectContext {
         }
     }
     
+    public nonisolated func delete(_ model: PersistentModel) throws(MOCError) {
+        guard
+            let _ = model.context,
+            let id = model.id
+        else { return }
+        let filter = Table(model._getSchema()).filter(Expression<Int64>("id") == id)
+        do {
+            try connection.run(filter.delete())
+            Task {@MainActor in
+                var matchedBefore = [AnyQueryObserver]()
+                guard
+                    let queries = registeredQueries[model.typeIdentifier]
+                else { return }
+                for (key, query) in queries {
+                    guard let query = query.query else {
+                        continue
+                    }
+                    if query.doesMatch(model) {
+                        matchedBefore.append(query)
+                    }
+                }
+                for query in matchedBefore {
+                    query.remove(model)
+                }
+            }
+        } catch let error as SQLite.Result {
+            throw error.parse()
+        } catch {
+            throw .other(message: error.localizedDescription)
+        }
+    }
+
+    
     package func run(_ query: String) throws {
         try connection.run(query)
     }

@@ -88,6 +88,36 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     public init(_ predicate: PredicateBuilder<M>) {
         self.predicate = predicate
     }
+    
+    @MainActor
+    package func handleUpdate(_ model: any PersistentModel, matchedBeforeChange: Bool) {
+        guard let model = model as? ModelType else { return }
+        if predicate.doesMatch(model) {
+            print("matches now and matched before: \(matchedBeforeChange)")
+            if !matchedBeforeChange {
+                results?.append(model)
+            }
+        } else if matchedBeforeChange {
+            print("doesn't match now, gets removed")
+            results?.removeAll(where: { $0.id == model.id })
+        }
+        publishToEnclosingObserver?()
+        objectWillChange.send()
+    }
+    
+    @MainActor
+    package func doesMatch(_ model: any PersistentModel) -> Bool {
+        guard let model = model as? ModelType else { return false }
+        return predicate.doesMatch(model)
+    }
+    
+    @MainActor
+    package func remove(_ model: any PersistentModel) {
+        guard let model = model as? ModelType else { return }
+        results?.removeAll(where: { $0.id! == model.id! })
+        publishToEnclosingObserver?()
+        objectWillChange.send()
+    }
 }
 
 @MainActor
