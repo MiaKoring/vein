@@ -87,8 +87,8 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     
     @MainActor
     package func appendAny(_ models: [AnyObject]) {
-        guard let typedModel = models as? [M] else { return }
-        append(typedModel)
+        guard let typedModels = models as? [M] else { return }
+        append(typedModels)
     }
     
     package init(_ predicate: PredicateBuilder<M>) {

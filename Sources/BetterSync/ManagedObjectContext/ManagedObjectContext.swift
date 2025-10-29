@@ -255,33 +255,39 @@ public actor ManagedObjectContext {
     }
     
     @MainActor
-    private var pendingNotifications: [ObjectIdentifier: [Int: [AnyObject]]] = [:]
+    private var pendingNotifications: [ObjectIdentifier: [AnyObject]] = [:]
     
     @MainActor
     private var notificationTask: Task<Void, Never>?
     
-    private nonisolated(unsafe) var pendingActorNotifications: [ObjectIdentifier: [Int: [AnyObject]]] = [:]
+    private nonisolated(unsafe) var pendingActorNotifications: [ObjectIdentifier: [AnyObject]] = [:]
     private var actorNotificationTask: Task<Void, Never>?
     
     private func scheduleActorNotification<M: PersistentModel>(_ model: M) {
         pendingActorNotifications[
             M.typeIdentifier,
-            default: [:]
-        ][
-            PredicateBuilder<M>().hashValue,
             default: []
         ]
             .append(model)
+        
+        actorNotificationTask = Task {
+            try? await Task.sleep(for: .milliseconds(50))
+            Task {@MainActor in
+                await flushActorNotifications()
+            }
+        }
     }
     
     @MainActor
     private func flushActorNotifications() async {
         let notifications = await pendingActorNotifications
         pendingActorNotifications.removeAll()
-        for (identifier, queryDict) in notifications {
-            for (key, models) in queryDict {
-                if let query = registeredQueries[identifier]?[key] as? AnyQueryObserver {
-                    query.appendAny(models)
+        for (identifier, models) in notifications {
+            if let queries = registeredQueries[identifier] {
+                for (_, query) in queries {
+                    if let query = query.query as? AnyQueryObserver {
+                        query.appendAny(models)
+                    }
                 }
             }
         }
@@ -291,15 +297,12 @@ public actor ManagedObjectContext {
     private func scheduleNotification<M: PersistentModel>(_ model: M) {
         pendingNotifications[
             M.typeIdentifier,
-            default: [:]
-        ][
-            PredicateBuilder<M>().hashValue,
             default: []
         ]
             .append(model)
         notificationTask?.cancel()
         notificationTask = Task {
-            try? await Task.sleep(for: .milliseconds(10))
+            try? await Task.sleep(for: .milliseconds(50))
             flushNotifications()
         }
     }
@@ -308,10 +311,12 @@ public actor ManagedObjectContext {
     private func flushNotifications() {
         let notifications = pendingNotifications
         pendingNotifications.removeAll()
-        for (identifier, queryDict) in notifications {
-            for (key, models) in queryDict {
-                if let query = registeredQueries[identifier]?[key] as? AnyQueryObserver {
-                    query.appendAny(models)
+        for (identifier, models) in notifications {
+            if let queries = registeredQueries[identifier] {
+                for (_, query) in queries {
+                    if let query = query.query as? AnyQueryObserver {
+                        query.appendAny(models)
+                    }
                 }
             }
         }
