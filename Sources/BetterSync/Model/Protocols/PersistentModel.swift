@@ -10,7 +10,6 @@ public protocol PersistentModel: AnyObject, Sendable {
     var id: Int64? { get set }
     var context: ManagedObjectContext? { get set }
     
-    func _getSchema() -> String
     var _fields: [any PersistedField] { get }
     static var _fieldInformation: [FieldInformation] { get }
     
@@ -20,6 +19,7 @@ public protocol PersistentModel: AnyObject, Sendable {
 extension PersistentModel {
     public static var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
     public var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
+    func _getSchema() -> String { Self.schema }
 }
 
 struct AnyPersistentModelType: Hashable {

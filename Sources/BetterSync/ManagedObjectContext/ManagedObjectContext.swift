@@ -235,7 +235,9 @@ public actor ManagedObjectContext {
         let filter = Table(model._getSchema()).filter(Expression<Int64>("id") == id)
         do {
             try connection.run(filter.delete())
-            Task {@MainActor in
+            model.context = nil
+            model.id = nil
+            Task { @MainActor in
                 var matchedBefore = [AnyQueryObserver]()
                 guard
                     let queries = registeredQueries[model.typeIdentifier]

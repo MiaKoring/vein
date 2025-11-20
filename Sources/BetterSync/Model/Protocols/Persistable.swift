@@ -5,7 +5,10 @@ public nonisolated protocol Persistable {
     associatedtype PersistentRepresentation: ColumnType
     var asPersistentRepresentation: PersistentRepresentation { get }
     init?(fromPersistent representation: PersistentRepresentation)
-    static var sqliteTypeName: SQLiteTypeName { get }
+}
+
+extension Persistable {
+    public static var sqliteTypeName: SQLiteTypeName { PersistentRepresentation.sqliteTypeName }
 }
 
 public protocol ColumnType {

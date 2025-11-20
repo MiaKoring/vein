@@ -13,6 +13,10 @@ public protocol PersistedField: Sendable {
 }
 
 extension PersistedField {
+    public static var sqliteTypeName: SQLiteTypeName {
+        WrappedType.sqliteTypeName
+    }
+    
     var instanceKey: String {
         guard let key else {
             fatalError(MOCError.keyMissing(message: "raised by Field property of Type '\(WrappedType.self)'").localizedDescription)
