@@ -38,7 +38,7 @@ public actor ManagedObjectContext {
     }
     
     public nonisolated func createSchema(_ name: String) -> TableBuilder {
-        return BetterSync.TableBuilder(self, named: name)
+        return Vein.TableBuilder(self, named: name)
     }
     
     public func insertInBackground<M: PersistentModel>(_ model: M) throws(MOCError) {
