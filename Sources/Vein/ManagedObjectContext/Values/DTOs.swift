@@ -21,6 +21,8 @@ public struct FieldInformation: Sendable {
     }
 }
 
+extension FieldInformation: Hashable {}
+
 extension [FieldInformation] {
     var eagerLoaded: [FieldInformation] {
         self.filter { $0.eagerLoaded }
