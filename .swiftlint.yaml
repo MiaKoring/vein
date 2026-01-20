@@ -1,0 +1,3 @@
+disabled_rules:
+  - type_name
+  - private_over_fileprivate
