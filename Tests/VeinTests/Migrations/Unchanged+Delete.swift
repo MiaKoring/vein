@@ -103,7 +103,8 @@ fileprivate enum SimpleMigrationSuccess: SchemaMigrationPlan {
     static let migrateV1toV2 = MigrationStage.complex(
         fromVersion: SimpleSchemaV0_0_1.self,
         toVersion: SimpleSchemaV0_0_2.self,
-        willMigrate: { context in            try SimpleSchemaV0_0_1.Test.unchangedMigration(
+        willMigrate: { context in
+            try SimpleSchemaV0_0_1.Test.unchangedMigration(
                 to: SimpleSchemaV0_0_2.Test.self,
                 on: context
             )

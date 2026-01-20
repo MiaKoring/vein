@@ -94,7 +94,7 @@ extension ManagedObjectContextError: LocalizedError {
             case .baseNewerThanDestination:
                 return "Migration base version number must be lower"
             case .fieldMismatch:
-                return "PersistentModel/unchangedMigrate requires fields of origin and destination to have unchanged underlying types and names"
+                return "PersistentModel/unchangedMigration requires fields of origin and destination to have unchanged underlying types and names"
             case .notInsideMigration:
                 return "Certain functions are only available during migrations to ensure stability"
             case .other:

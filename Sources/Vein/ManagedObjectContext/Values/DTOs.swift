@@ -21,7 +21,16 @@ public struct FieldInformation: Sendable {
     }
 }
 
-extension FieldInformation: Hashable {}
+extension FieldInformation: Hashable {
+    public static func == (lhs: FieldInformation, rhs: FieldInformation) -> Bool {
+        lhs.typeName == rhs.typeName && lhs.key == rhs.key
+    }
+    
+    public func hash(into hasher: inout Hasher) {
+        hasher.combine(typeName)
+        hasher.combine(key)
+    }
+}
 
 extension [FieldInformation] {
     var eagerLoaded: [FieldInformation] {
