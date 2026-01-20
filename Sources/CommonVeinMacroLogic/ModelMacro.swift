@@ -22,7 +22,7 @@ public struct Model {
                 let hasFieldAttribute = varDecl.attributes.contains { attr in
                     if let attrSyntax = attr.as(AttributeSyntax.self),
                        let name = attrSyntax.attributeName.as(IdentifierTypeSyntax.self) {
-                        return name.name.text.hasSuffix("LazyField")
+                        return name.name.text == "LazyField"
                     }
                     return false
                 }
@@ -38,7 +38,7 @@ public struct Model {
                 let hasFieldAttribute = varDecl.attributes.contains { attr in
                     if let attrSyntax = attr.as(AttributeSyntax.self),
                        let name = attrSyntax.attributeName.as(IdentifierTypeSyntax.self) {
-                        return name.name.text.hasSuffix("Field")
+                        return name.name.text == "Field"
                     }
                     return false
                 }
@@ -169,8 +169,8 @@ public struct Model {
                 let hasFieldAttribute = varDecl.attributes.contains { attr in
                     if let attrSyntax = attr.as(AttributeSyntax.self),
                        let name = attrSyntax.attributeName.as(IdentifierTypeSyntax.self) {
-                        return name.name.text.hasSuffix("LazyField")  ||
-                        name.name.text .hasSuffix("Field")
+                        return name.name.text == "LazyField"  ||
+                        name.name.text == "Field"
                     }
                     return false
                 }
