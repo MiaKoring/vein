@@ -35,7 +35,7 @@ public struct EncryptedValue<T: Codable>: Codable {
 }
 
 @propertyWrapper
-public class Encrypted<T: Codable>: EncryptedValueType {
+public final class Encrypted<T: Codable>: EncryptedValueType, @unchecked Sendable {
     public typealias WrappedType = T
     private let provider: EncryptionProvider?
     public var encryptedData: Data
