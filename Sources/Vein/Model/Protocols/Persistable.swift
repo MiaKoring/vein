@@ -1,7 +1,7 @@
 import SQLite
 import Foundation
 
-public nonisolated protocol Persistable {
+public nonisolated protocol Persistable: Sendable {
     associatedtype PersistentRepresentation: ColumnType
     var asPersistentRepresentation: PersistentRepresentation { get }
     init?(fromPersistent representation: PersistentRepresentation)

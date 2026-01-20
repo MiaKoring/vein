@@ -127,7 +127,7 @@ public struct Model {
         ]
     }
 
-    static var _fieldInformation: [FieldInformation] = [
+    static let _fieldInformation: [FieldInformation] = [
         \(fieldInformationString)
     ]
 """

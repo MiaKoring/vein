@@ -24,7 +24,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
     /// It will likely result in a crash.
     /// Only intended to get used by macro generated code.
     @discardableResult
-    public func addCheck<V: Persistable>(_ op: ComparisonOperator, _ key: String, _ value: V) -> Self {
+    public func addCheck<V: Persistable & Sendable>(_ op: ComparisonOperator, _ key: String, _ value: V) -> Self {
         switch op {
             case .isEqualTo: equal(key, value)
             case .isNotEqualTo: notEqual(key, value)
@@ -35,7 +35,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
         }
     }
     
-    private func equal<V: Persistable>(_ key: String,
+    private func equal<V: Persistable & Sendable>(_ key: String,
                              _ value: V) -> Self {
         let sqliteValue = sqliteValue(from: value)
             
@@ -72,7 +72,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
         return old
     }
     
-    private func notEqual<V: Persistable>(_ key: String,
+    private func notEqual<V: Persistable & Sendable>(_ key: String,
                                        _ value: V) -> Self {
         let sqliteValue = sqliteValue(from: value)
         
@@ -108,7 +108,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
         return old
     }
     
-    private func bigger<V: Persistable>(_ key: String,
+    private func bigger<V: Persistable & Sendable>(_ key: String,
                                        _ value: V) -> Self {
         let sqliteValue = sqliteValue(from: value)
         
@@ -145,7 +145,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
         return old
     }
     
-    private func smaller<V: Persistable>(_ key: String,
+    private func smaller<V: Persistable & Sendable>(_ key: String,
                                         _ value: V) -> Self {
         let sqliteValue = sqliteValue(from: value)
         
@@ -182,7 +182,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
         return old
     }
     
-    private func smallerOrEqual<V: Persistable>(_ key: String,
+    private func smallerOrEqual<V: Persistable & Sendable>(_ key: String,
                                                _ value: V) -> Self {
         let sqliteValue = sqliteValue(from: value)
         
@@ -219,7 +219,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
         return old
     }
     
-    private func biggerOrEqual<V: Persistable>(_ key: String,
+    private func biggerOrEqual<V: Persistable & Sendable>(_ key: String,
                                               _ value: V) -> Self {
         let sqliteValue = sqliteValue(from: value)
         
