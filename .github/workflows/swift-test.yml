@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-22.04
+    container:
+      image: swift:6.2-noble
 
     steps:
       - name: Checkout code
