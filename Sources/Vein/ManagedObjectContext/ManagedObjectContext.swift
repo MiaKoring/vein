@@ -1,5 +1,9 @@
 import SQLite
+#if !os(Android) && !os(Windows) && !os(Linux)
 import SQLite3
+#else
+import SwiftToolchainCSQLite
+#endif
 import Foundation
 
 extension Connection: @unchecked @retroactive Sendable {}

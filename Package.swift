@@ -1,8 +1,14 @@
-// swift-tools-version: 5.10
+// swift-tools-version: 6.20
 // The swift-tools-version declares the minimum version of Swift required to build this package.
 
 import PackageDescription
 import CompilerPluginSupport
+
+#if !os(Android) && !os(Windows) && !os(Linux)
+let sqliteTraits = ["SystemSQLite"]
+#else
+let sqliteTraits = ["SwiftToolchainSQLite"]
+#endif
 
 let package = Package(
     name: "amethyst-vein",
@@ -22,7 +28,11 @@ let package = Package(
         )
     ],
     dependencies: [
-        .package(url: "https://github.com/miakoring/SQLite.swift.git", branch: "master"),
+        .package(
+            url: "https://github.com/amethystsoft/SQLite.swift.git",
+            branch: "master",
+            traits: sqliteTraits
+        ),
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "5.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0" ..< "610.0.0"),
     ],
