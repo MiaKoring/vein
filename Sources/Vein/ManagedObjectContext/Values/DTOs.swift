@@ -47,7 +47,10 @@ extension FieldInformation {
                     case .real: Expression<Double?>(key)
                     case .text: Expression<String?>(key)
                     case .blob: Expression<Data?>(key)
-                    default: fatalError()
+                    default:
+                        fatalError(
+                            "Unexpectedly found null. Check SQLiteTypeName.notNull() for logic errors"
+                        )
                 }
             case false:
                 switch typeName {
@@ -55,7 +58,10 @@ extension FieldInformation {
                     case .real: Expression<Double>(key)
                     case .text: Expression<String>(key)
                     case .blob: Expression<Data>(key)
-                    default: fatalError()
+                    default:
+                        fatalError(
+                            "Unexpectedly found null. Check SQLiteTypeName.notNull() for logic errors"
+                        )
                 }
         }
     }
@@ -79,7 +85,9 @@ extension FieldInformation {
                     Table(schema).addColumn(Expression<Data?>(key))
                 )
             case .null:
-                fatalError()
+                fatalError(
+                    "Unexpectedly found null. Check SQLiteTypeName.notNull() for logic errors"
+                )
         }
     }
 }
