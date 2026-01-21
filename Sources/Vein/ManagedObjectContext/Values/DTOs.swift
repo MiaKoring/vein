@@ -42,7 +42,7 @@ extension FieldInformation {
     package var expressible: Expressible {
         return switch typeName.isNull {
             case true:
-                switch typeName {
+                switch SQLiteTypeName.notNull(typeName) {
                     case .integer: Expression<Int64?>(key)
                     case .real: Expression<Double?>(key)
                     case .text: Expression<String?>(key)
@@ -57,6 +57,29 @@ extension FieldInformation {
                     case .blob: Expression<Data>(key)
                     default: fatalError()
                 }
+        }
+    }
+    
+    package func addRetroactively(to schema: String, on context: ManagedObjectContext) throws {
+        switch SQLiteTypeName.notNull(typeName) {
+            case .integer:
+                try context.run(
+                    Table(schema).addColumn(Expression<Int64?>(key))
+                )
+            case .real:
+                try context.run(
+                    Table(schema).addColumn(Expression<Double?>(key))
+                )
+            case .text:
+                try context.run(
+                    Table(schema).addColumn(Expression<String?>(key))
+                )
+            case .blob:
+                try context.run(
+                    Table(schema).addColumn(Expression<Data?>(key))
+                )
+            case .null:
+                fatalError()
         }
     }
 }
