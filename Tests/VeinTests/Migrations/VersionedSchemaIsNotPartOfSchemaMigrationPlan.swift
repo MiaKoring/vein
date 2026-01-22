@@ -5,38 +5,27 @@ import Logging
 @testable import VeinCore
 
 extension MigrationTests {
-    @Test func noMigrationForOutdatedModelVersion() async throws {
-        let path = try prepareContainerLocation(name: "determineSchemaVersion")
-        let container = try ModelContainer(
-            Version0_0_1.self,
-            migration: MigrationPlan.self,
-            at: path
-        )
-        let originModel = Version0_0_1.BasicModel(field: "very important content")
-        try container.context.insert(originModel)
+    @Test func versionedSchemaIsNotPartOfSchemaMigrationPlan() async throws {
+        let path = try prepareContainerLocation(name: "ModelContainerErrors")
         
-        let newContainer = try ModelContainer(
-            Version0_0_2.self,
-            migration: MigrationPlan.self,
-            at: path
-        )
         do {
-            try newContainer.migrate()
-        } catch let error as ManagedObjectContextError {
+            let _ = try ModelContainer(
+                Version0_0_2.self,
+                migration: MigrationPlan.self,
+                at: path
+            )
+        } catch {
             if
-                case let .noMigrationForOutdatedModelVersion(
-                    migration,
-                    version
+                case let .versionedSchemaIsNotRegisteredOnSchemaMigrationPlan(
+                    schema,
+                    migration
                 ) = error
             {
+                #expect("\(schema)" == "\(Version0_0_2.self)")
                 #expect("\(migration)" == "\(MigrationPlan.self)")
-                #expect(version == Version0_0_1.version)
                 return
             }
             Issue.record("Thrown error does not match expectations: \(error.errorDescription)")
-            return
-        } catch {
-            Issue.record("Thrown error does not match expectations: \(error.localizedDescription)")
             return
         }
         
@@ -86,18 +75,10 @@ fileprivate enum Version0_0_2: VersionedSchema {
 fileprivate enum MigrationPlan: SchemaMigrationPlan {
     static var schemas: [any Vein.VersionedSchema.Type] {
         [
-            Version0_0_1.self,
-            Version0_0_2.self
+            Version0_0_1.self
         ]
     }
     
     static var stages: [Vein.MigrationStage] { [] }
-    
-    static let v1ToV2 = Vein.MigrationStage.complex(
-        fromVersion: Version0_0_1.self,
-        toVersion: Version0_0_2.self,
-        willMigrate: nil,
-        didMigrate: nil
-    )
 }
 
