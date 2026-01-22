@@ -22,4 +22,3 @@ public struct ModelVersion: Comparable, Hashable, Equatable, Sendable {
         lhs.patch == rhs.patch
     }
 }
-

@@ -7,7 +7,7 @@ public struct MigrationTester {
     private let id = UUID()
     public let containerPath: String
     
-    init(migrationPlan: any SchemaMigrationPlan.Type) throws {
+    public init(migrationPlan: any SchemaMigrationPlan.Type) throws {
         self.migrationPlan = migrationPlan
         self.containerPath = try Self.prepareContainerLocation(
             plan: migrationPlan,
@@ -15,7 +15,7 @@ public struct MigrationTester {
         )
     }
     
-    func seed(
+    public func seed(
         version: VersionedSchema.Type,
         with block: (ManagedObjectContext) throws -> Void
     ) throws {
@@ -27,7 +27,7 @@ public struct MigrationTester {
         try block(container.context)
     }
     
-    func migrateAndCheck(
+    public func migrateAndCheck(
         version: VersionedSchema.Type,
         with block: (ManagedObjectContext) throws -> Void
     ) throws {
@@ -40,7 +40,7 @@ public struct MigrationTester {
         try block(container.context)
     }
     
-    func testCompleteChain (
+    public func testCompleteChain (
         initialData: (ManagedObjectContext) throws -> Void,
         validations: [ModelVersion: (ManagedObjectContext) throws -> Void]
     ) throws {
