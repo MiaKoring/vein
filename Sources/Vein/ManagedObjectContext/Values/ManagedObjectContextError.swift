@@ -25,7 +25,7 @@ public enum ManagedObjectContextError: Error {
     case modelsUnhandledAfterMigration(any VersionedSchema.Type, any VersionedSchema.Type, [String])
     case noSchemaMatchingVersion(SchemaMigrationPlan.Type, ModelVersion)
     case noMigrationForOutdatedModelVersion(SchemaMigrationPlan.Type, ModelVersion)
-    case versionedSchemaIsNotRegisteredOnSchemaMigrationPlan(VersionedSchema.Type, SchemaMigrationPlan.Type)
+    case schemaNotRegisteredOnMigrationPlan(VersionedSchema.Type, SchemaMigrationPlan.Type)
     case other(message: String)
 }
 
@@ -86,7 +86,7 @@ extension ManagedObjectContextError: LocalizedError {
                 return "\(plan) is missing a versioned schema matching version \(version)"
             case .noMigrationForOutdatedModelVersion(let plan, let version):
                 return "\(plan) doesn't have a migration stage starting with outdated \(version)"
-            case .versionedSchemaIsNotRegisteredOnSchemaMigrationPlan(let versionedSchema, let plan):
+            case .schemaNotRegisteredOnMigrationPlan(let versionedSchema, let plan):
                 return "\(versionedSchema) isn't managed by \(plan)"
             case .other(let message):
                 return "Unexpected: \(message)"
@@ -137,8 +137,8 @@ extension ManagedObjectContextError: LocalizedError {
                 return "Database is on the state of a version not managed by VersionedSchema"
             case .noMigrationForOutdatedModelVersion:
                 return "Migration chain is incomplete. No migration stage found for outdated VersionedSchema."
-            case .versionedSchemaIsNotRegisteredOnSchemaMigrationPlan:
-                return "ModelContainer only accepts a VersionedSchema thats managed by the passed SchemaMigrationPlan"
+            case .schemaNotRegisteredOnMigrationPlan:
+                return "ModelContainer only accepts a VersionedSchema that's managed by the passed SchemaMigrationPlan"
             case .other:
                 return nil
         }
@@ -200,7 +200,7 @@ extension ManagedObjectContextError: LocalizedError {
                     """
                     Make sure there is an uninterrupted chain of migration stages.
                     """
-            case .versionedSchemaIsNotRegisteredOnSchemaMigrationPlan:
+            case .schemaNotRegisteredOnMigrationPlan:
                 return "Add the versioned schema to the static `schemas` property of the SchemaMigrationPlan."
             case .other:
                 return nil

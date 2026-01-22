@@ -16,7 +16,7 @@ extension MigrationTests {
             )
         } catch {
             if
-                case let .versionedSchemaIsNotRegisteredOnSchemaMigrationPlan(
+                case let .schemaNotRegisteredOnMigrationPlan(
                     schema,
                     migration
                 ) = error

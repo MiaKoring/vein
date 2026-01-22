@@ -13,7 +13,7 @@ public final class ModelContainer: Sendable {
         at path: String
     ) throws(ManagedObjectContextError) {
         guard migration.schemas.contains(where: { $0.self == versionedSchema }) else {
-            throw ManagedObjectContextError.versionedSchemaIsNotRegisteredOnSchemaMigrationPlan(versionedSchema, migration)
+            throw ManagedObjectContextError.schemaNotRegisteredOnMigrationPlan(versionedSchema, migration)
         }
         
         // TODO: make ManagedObjectContext only accept models from the versionedSchema or its predecessors(in migration)
@@ -86,9 +86,7 @@ public final class ModelContainer: Sendable {
         guard let version else { return nil }
         
         // Already up to date, no migration is necessary
-        if
-            version == versionedSchema.version
-        {
+        if version == versionedSchema.version {
             return nil
         }
         

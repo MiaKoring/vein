@@ -92,12 +92,5 @@ fileprivate enum MigrationPlan: SchemaMigrationPlan {
     }
     
     static var stages: [Vein.MigrationStage] { [] }
-    
-    static let v1ToV2 = Vein.MigrationStage.complex(
-        fromVersion: Version0_0_1.self,
-        toVersion: Version0_0_2.self,
-        willMigrate: nil,
-        didMigrate: nil
-    )
 }
 

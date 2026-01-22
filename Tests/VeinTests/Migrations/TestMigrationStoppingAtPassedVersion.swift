@@ -31,7 +31,7 @@ extension MigrationTests {
         
         try newContainer.migrate()
         
-        let newSchemas = try container.context.getAllStoredSchemas()
+        let newSchemas = try newContainer.context.getAllStoredSchemas()
         #expect(newSchemas == [Version0_0_2.BasicModel.schema])
         
         let newVersion = try newContainer.context.getLatestMigrationVersion()
