@@ -89,10 +89,14 @@ public struct MigrationTester {
         )
         
         if !FileManager.default.fileExists(atPath: dbPath) {
-            FileManager.default.createFile(
+            guard FileManager.default.createFile(
                 atPath: dbPath,
                 contents: nil
-            )
+            ) else {
+                throw ManagedObjectContextError.other(
+                    message: "Failed to create database at \(dbPath)"
+                )
+            }
         }
         
         return dbPath
