@@ -30,11 +30,15 @@ extension ManagedObjectContext {
         try fetchAll(modelType._PredicateHelper()._builder())
     }
     
-    /// Registers an object to be inserted in the context’s persistent store the next time changes are saved.
     public nonisolated func insert<M: PersistentModel>(_ model: M) throws(ManagedObjectContextError) {
         guard model.context == nil else {
             throw MOCError.insertManagedModel(message: "raised by model of type '\(M.self)' with id \(model.id.ulidString)")
         }
+        
+        guard let _ = modelContainer.getSchema(for: model.typeIdentifier) else {
+            throw MOCError.inactiveModelType(model)
+        }
+        
         model._setupFields()
         
         // An insert invalidates existing deletes and touches
@@ -56,14 +60,11 @@ extension ManagedObjectContext {
         }
         model.context = self
         
-        identityMap.startTracking(model, type: M.self, id: model.id)
+        identityMap.startTracking(model)
         
         scheduleNotification(model)
     }
     
-    /// Captures state of fields to make rollbacks possible
-    /// Only intended to be called by Fields
-    /// - Returns: hashes of Predicates matching the model before the change
     public nonisolated func _prepareForChange(of model: any PersistentModel) -> [Int] {
         writeCache.mutate { _,_,_, states in
             if states[model.typeIdentifier, default: [:]][model.id] == nil {
@@ -115,8 +116,11 @@ extension ManagedObjectContext {
     }
     
     /// Specifies an object that should be removed from its persistent store when changes are committed.
-    public nonisolated func delete<M: PersistentModel>(_ model: M) {
+    public nonisolated func delete<M: PersistentModel>(_ model: M) throws(ManagedObjectContextError) {
         guard model.context != nil else { return }
+        guard let _ = modelContainer.getSchema(for: model.typeIdentifier) else {
+            throw ManagedObjectContextError.inactiveModelType(model)
+        }
         
         // Deletes automatically invalidate a touch or insert
         writeCache.mutate { inserts, touches, deletes,_ in
@@ -156,8 +160,14 @@ extension ManagedObjectContext {
         }
     }
     
-    public nonisolated func batchDelete<M: PersistentModel>(_ models: [M]) {
+    public nonisolated func batchDelete<M: PersistentModel>(_ models: [M]) throws(ManagedObjectContextError) {
         let managedModels = models.compactMap { $0.context != nil ? $0: nil }
+        
+        if let first = managedModels.first {
+            guard let _ = modelContainer.getSchema(for: first.typeIdentifier) else {
+                throw ManagedObjectContextError.inactiveModelType(first)
+            }
+        } else { return }
         
         // Deletes automatically invalidate a touch or insert
         writeCache.mutate { inserts, touches, deletes,_ in
@@ -239,32 +249,32 @@ extension ManagedObjectContext {
             do {
                 try connection.safeTransaction {
                     // Delete first to avoid theoretically possible uniqueness problems
-                    for modelType in schema.models {
-                        guard let deletedModels = deletesCopy[modelType.typeIdentifier] else {
-                            continue
+                    for (identifier, models) in deletesCopy {
+                        guard let _ = modelContainer.getSchema(for: identifier) else {
+                            throw ManagedObjectContextError.inactiveModelType(models.values.first!)
                         }
                         
-                        for model in deletedModels.values {
+                        for model in models.values {
                             try _writeDelete(model)
                         }
                     }
                     
-                    for modelType in schema.models {
-                        guard let insertedModels = insertsCopy[modelType.typeIdentifier] else {
-                            continue
+                    for (identifier, models) in insertsCopy {
+                        guard let _ = modelContainer.getSchema(for: identifier) else {
+                            throw ManagedObjectContextError.inactiveModelType(models.values.first!)
                         }
                         
-                        for model in insertedModels.values {
+                        for model in models.values {
                             try _writeInsert(model)
                         }
                     }
                     
-                    for modelType in schema.models {
-                        guard let touchedModels = touchesCopy[modelType.typeIdentifier] else {
-                            continue
+                    for (identifier, models) in touchesCopy {
+                        guard let _ = modelContainer.getSchema(for: identifier) else {
+                            throw ManagedObjectContextError.inactiveModelType(models.values.first!)
                         }
                         
-                        for model in touchedModels.values {
+                        for model in models.values {
                             // TODO: add update
                         }
                     }
@@ -309,25 +319,28 @@ extension ManagedObjectContext {
             }
             
             writeCache.mutate { inserts, touches, deletes, primitiveStates in
-                for modelType in schema.models {
-                    for (_, model) in inserts[modelType.typeIdentifier, default: [:]] {
+                for (identifier, models) in inserts {
+                    for (_, model) in models {
                         model.context = nil
-                        openAndRemoveFromIdentityMap(model)
+                        identityMap.remove(identifier, id: model.id)
                     }
-                    
-                    for (_, model) in touches[modelType.typeIdentifier, default: [:]] {
-                        if
-                            let state = primitiveStates[
-                                modelType.typeIdentifier,
-                                default: [:]
-                            ][model.id] {
+                }
+                
+                for (identifier, models) in touches {
+                    for (_, model) in models {
+                        if let state = primitiveStates[
+                            identifier,
+                            default: [:]
+                        ][model.id] {
                             model.applyPrimitiveState(state)
                         }
                     }
                     
-                    for (_, model) in deletes[modelType.typeIdentifier, default: [:]] {
-                        model.context = self
-                        openAndTrack(model)
+                    for (identifier, models) in inserts {
+                        for (_, model) in models {
+                            model.context = self
+                            identityMap.startTracking(model)
+                        }
                     }
                 }
                 
@@ -337,19 +350,6 @@ extension ManagedObjectContext {
                 deletes.removeAll()
             }
         }
-    }
-    
-    // These two are currently required, because the compiler was unable to resolve
-    // identityMap.startTracking(model, type: modelType.self, id: model.id)
-    // in the place they are in rollback()
-    @inline(__always)
-    private nonisolated func openAndRemoveFromIdentityMap<T: PersistentModel>(_ model: T) {
-        identityMap.remove(T.self, id: model.id)
-    }
-    
-    @inline(__always)
-    private nonisolated func openAndTrack<T: PersistentModel>(_ model: T) {
-        identityMap.startTracking(model, type: T.self, id: model.id)
     }
 }
 

@@ -160,6 +160,7 @@ fileprivate enum ComplexMigrationSuccess: SchemaMigrationPlan {
         willMigrate: { context in
             // Fetch V1 models
             let tests = try context.fetchAll(ComplexSchemaV0_0_1.Test._PredicateHelper()._builder())
+            try ComplexSchemaV0_0_1.Unused.deleteMigration(on: context)
             
             for test in tests {
                 if test.randomValue < 0 {
@@ -169,8 +170,6 @@ fileprivate enum ComplexMigrationSuccess: SchemaMigrationPlan {
                 try context.insert(new)
                 try context.delete(test)
             }
-            
-            try context.cleanupOldSchema(ComplexSchemaV0_0_1.self)
         },
         didMigrate: nil
     )

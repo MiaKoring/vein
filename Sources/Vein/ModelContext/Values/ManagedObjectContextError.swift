@@ -25,6 +25,7 @@ public enum ManagedObjectContextError: Error {
     case noMigrationForOutdatedModelVersion(SchemaMigrationPlan.Type, ModelVersion)
     case schemaNotRegisteredOnMigrationPlan(VersionedSchema.Type, SchemaMigrationPlan.Type)
     case capturedStateApplicationFailed(any Persistable.Type, String)
+    case inactiveModelType(any PersistentModel)
     case other(message: String)
 }
 
@@ -85,6 +86,8 @@ extension ManagedObjectContextError: LocalizedError {
                 return "\(versionedSchema) isn't managed by \(plan)"
             case .capturedStateApplicationFailed(let type, let key):
                 return "Application of captured state failed while converting back to \(type) on field with key: \(key)"
+            case .inactiveModelType(let model):
+                return "Attempted CRUD operation on inactive model \(model)."
             case .other(let message):
                 return "Unexpected: \(message)"
         }
@@ -134,6 +137,8 @@ extension ManagedObjectContextError: LocalizedError {
                 return "ModelContainer only accepts a VersionedSchema that's managed by the passed SchemaMigrationPlan"
             case .capturedStateApplicationFailed:
                 return "Conversion from Any back to WrappedType failed."
+            case .inactiveModelType:
+                return "Operations are restricted to types belonging to the current version or origin/destination version during an active migration."
             case .other:
                 return nil
         }
@@ -197,6 +202,8 @@ extension ManagedObjectContextError: LocalizedError {
                     """
             case .schemaNotRegisteredOnMigrationPlan:
                 return "Add the versioned schema to the static `schemas` property of the SchemaMigrationPlan."
+            case .inactiveModelType:
+                return "Make sure to only use up to date Versions of Models and not keep instances of outdated Model versions outside of migrations. Outdated versions are only save to use outside of the context and during their migrations."
             case .other:
                 return nil
         }

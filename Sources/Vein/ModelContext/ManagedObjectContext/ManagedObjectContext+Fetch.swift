@@ -29,7 +29,7 @@ extension ManagedObjectContext {
                     let model = T(id: id, fields: fields)
                     model.context = self
                     models.append(model)
-                    startTracking(model, T.self, id)
+                    startTracking(model)
                 }
             }
             return models

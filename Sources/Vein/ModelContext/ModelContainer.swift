@@ -1,11 +1,20 @@
 import Foundation
 import SQLite
 
-public final class ModelContainer: Sendable {
+public final class ModelContainer: @unchecked Sendable {
     private let migration: SchemaMigrationPlan.Type
     private let path: String
-    public let context: ManagedObjectContext
+    
+    // Only force unwrapped to count as initialized,
+    // so ManagedObjectContex.init can recieve the function
+    //
+    // Do never mutate anywhere else, only safe under the above circumstances
+    public private(set) var context: ManagedObjectContext!
     public let versionedSchema: VersionedSchema.Type
+    
+    private var identifierCache = [ObjectIdentifier: any PersistentModel.Type]()
+    
+    private var currentMigration: (any VersionedSchema.Type, any VersionedSchema.Type)?
     
     public init(
         _ versionedSchema: VersionedSchema.Type,
@@ -17,13 +26,13 @@ public final class ModelContainer: Sendable {
         }
         
         // TODO: make ManagedObjectContext only accept models from the versionedSchema or its predecessors(in migration)
-        self.context = try ManagedObjectContext(
-            path: path,
-            schema: versionedSchema
-        )
         self.migration = migration
         self.path = path
         self.versionedSchema = versionedSchema
+        self.context = try ManagedObjectContext(
+            path: path,
+            modelContainer: self
+        )
         
         do {
             try context.createMigrationsTable()
@@ -39,6 +48,8 @@ public final class ModelContainer: Sendable {
     public func migrate() throws {
         defer {
             context.isInActiveMigration.value = false
+            currentMigration = nil
+            identifierCache.removeAll()
         }
         context.isInActiveMigration.value = true
         
@@ -49,13 +60,19 @@ public final class ModelContainer: Sendable {
                 migrationBlock,
                 didFinishMigration
             ) = try determineMigrationStage() {
+                self.currentMigration = (originVersion, destinationVersion)
                 
                 try migrationBlock?(context)
+                
                 try context.save()
                 
                 let unmigratedSchemas = try unmigratedSchemas(from: originVersion)
                 
                 guard unmigratedSchemas.isEmpty else {
+                    context.removeModelsFromContext(for: originVersion)
+                    if destinationVersion != versionedSchema {
+                        context.removeModelsFromContext(for: destinationVersion)
+                    }
                     throw ManagedObjectContextError.modelsUnhandledAfterMigration(
                         originVersion,
                         destinationVersion,
@@ -64,6 +81,10 @@ public final class ModelContainer: Sendable {
                 }
                 
                 try context.cleanupOldSchema(originVersion)
+                context.removeModelsFromContext(for: originVersion)
+                if destinationVersion != versionedSchema {
+                    context.removeModelsFromContext(for: destinationVersion)
+                }
                 
                 try didFinishMigration?(context)
             }
@@ -114,5 +135,28 @@ public final class ModelContainer: Sendable {
         }
         
         throw ManagedObjectContextError.noMigrationForOutdatedModelVersion(migration, version)
+    }
+    
+    nonisolated func getSchema(for identifier: ObjectIdentifier) -> (any PersistentModel.Type)? {
+        if let cached = identifierCache[identifier] {
+            return cached
+        }
+        
+        var potentialModelTypes: [any PersistentModel.Type]
+        
+        if let (origin, destination) = currentMigration {
+            potentialModelTypes = origin.models + destination.models
+        } else {
+            potentialModelTypes = versionedSchema.models
+        }
+            
+        for type in potentialModelTypes {
+            if type.typeIdentifier == identifier {
+                identifierCache[identifier] = type
+                return type
+            }
+        }
+        
+        return nil
     }
 }

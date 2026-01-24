@@ -355,7 +355,7 @@ fileprivate enum SimpleMigrationSuccess: SchemaMigrationPlan {
                 let date = try Date.sqliteFormatStyle.parse(model.date)
                 let newModel = SimpleSchemaV0_0_3.Test(date: Int(date.timeIntervalSince1970))
                 try context.insert(newModel)
-                context.delete(model)
+                try context.delete(model)
             }
             
         },
@@ -372,7 +372,7 @@ fileprivate enum SimpleMigrationSuccess: SchemaMigrationPlan {
                 let date = Date(timeIntervalSince1970: Double(model.date))
                 let newModel = SimpleSchemaV0_0_4.Test(addedAt: date)
                 try context.insert(newModel)
-                context.delete(model)
+                try context.delete(model)
             }
         },
         didMigrate: nil

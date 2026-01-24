@@ -2,7 +2,6 @@ import SQLite
 import Foundation
 import ULID
 
-public typealias ModelContext = ManagedObjectContext
 public actor ManagedObjectContext {
     public static nonisolated(unsafe) var shared: ManagedObjectContext?
     public static nonisolated(unsafe) var instance: ManagedObjectContext {
@@ -12,7 +11,7 @@ public actor ManagedObjectContext {
         return shared
     }
     package nonisolated let connection: Connection
-    nonisolated let schema: any VersionedSchema.Type
+    nonisolated unowned let modelContainer: ModelContainer
     
     // MARK: - Migrations
     package nonisolated let isInActiveMigration = Atomic(false)
@@ -42,9 +41,9 @@ public actor ManagedObjectContext {
     /// Connects to database at `path`, creates a new one if it doesn't exist
     init(
         path: String,
-        schema: any VersionedSchema.Type
+        modelContainer: ModelContainer
     ) throws(ManagedObjectContextError) {
-        self.schema = schema
+        self.modelContainer = modelContainer
         do {
             self.connection = try Connection(path)
             try self.connection.execute("PRAGMA journal_mode=WAL;")
@@ -56,8 +55,10 @@ public actor ManagedObjectContext {
     }
     
     /// In memory only
-    init(schema: any VersionedSchema.Type) throws(ManagedObjectContextError) {
-        self.schema = schema
+    init(
+        modelContainer: ModelContainer
+    ) throws(ManagedObjectContextError) {
+        self.modelContainer = modelContainer
         do {
             self.connection = try Connection(.inMemory)
         } catch let error as SQLite.Result {

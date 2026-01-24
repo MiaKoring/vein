@@ -66,6 +66,17 @@ extension ManagedObjectContext {
             try deleteTable(model.schema)
         }
     }
+    
+    @MainActor
+    package func removeModelsFromContext(for schema: any VersionedSchema.Type) {
+        for modelType in schema.models {
+            let models = identityMap.getAll(of: modelType)
+            models.forEach {
+                $0.context = nil
+            }
+            identityMap.removeAll(of: modelType)
+        }
+    }
 }
 
 enum MigrationTable {

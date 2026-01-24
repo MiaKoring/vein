@@ -14,7 +14,23 @@ extension ManagedObjectContext {
 nonisolated final class ThreadSafeIdentityMap {
     private var cache = Atomic([ObjectIdentifier: [ULID: WeakModel]]())
     
+    func getAll<T: PersistentModel>(of type: T.Type) -> [T] {
+        return
+            cache
+            .value[type.typeIdentifier]?
+            .values
+            .compactMap { $0.wrappedValue as? T } ?? []
+    }
+    
+    func removeAll<T: PersistentModel>(of type: T.Type) {
+        cache.value[type.typeIdentifier] = nil
+    }
+    
     func getTracked<T: PersistentModel>(_ type: T.Type, id: ULID) -> T? {
+        get(type.typeIdentifier, id: id)
+    }
+    
+    func getTracked<T: PersistentModel>(_ type: ObjectIdentifier, id: ULID) -> T? {
         get(type, id: id)
     }
     
@@ -22,34 +38,38 @@ nonisolated final class ThreadSafeIdentityMap {
         cache.value.reduce(0, { $0 + $1.value.count })
     }
     
-    func startTracking<T: PersistentModel>(_ object: T, type: T.Type, id: ULID) {
-        track(object, type: type, id: id)
+    func startTracking<T: PersistentModel>(_ object: T) {
+        track(object)
     }
     
     func batched<T: PersistentModel>(
         _ block: (
             (T.Type, ULID) -> T?,
-            (T, T.Type, ULID) -> Void
+            (T) -> Void
         ) -> Void
     ) {
-        block(get, track)
+        block(getTracked, track)
     }
     
     @inline(__always)
-    private func track<T: PersistentModel>(_ object: T, type: T.Type, id: ULID) {
+    private func track<T: PersistentModel>(_ object: T) {
         cache.mutate { cache in
-            cache[Self.key(type), default: [:]][id] = WeakModel(wrappedValue: object)
+            cache[T.typeIdentifier, default: [:]][object.id] = WeakModel(wrappedValue: object)
         }
     }
     
     @inline(__always)
-    private func get<T: PersistentModel>(_ type: T.Type, id: ULID) -> T? {
-        cache.value[Self.key(type)]?[id]?.wrappedValue as? T
+    private func get<T: PersistentModel>(_ type: ObjectIdentifier, id: ULID) -> T? {
+        cache.value[type]?[id]?.wrappedValue as? T
     }
     
     func remove<T: PersistentModel>(_ type: T.Type, id: ULID) {
+        remove(T.typeIdentifier, id: id)
+    }
+    
+    func remove(_ type: ObjectIdentifier, id: ULID) {
         cache.mutate { contents in
-            _ = contents[Self.key(type)]?.removeValue(forKey: id)
+            _ = contents[type]?.removeValue(forKey: id)
         }
     }
     
