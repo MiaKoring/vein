@@ -3,7 +3,6 @@ import Testing
 import Logging
 @testable import Vein
 @testable import VeinCore
-@testable import CommonVeinMacroLogic
 
 let testID = UUID()
 
