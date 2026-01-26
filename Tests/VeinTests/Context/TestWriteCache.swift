@@ -158,7 +158,7 @@ struct WriteCache {
     }
     
     @Test("Fetch includes unwritten changes")
-    func fetchInclusedUnwrittenChanges() throws {
+    func fetchIncludesUnwrittenChanges() throws {
         let container = try setupContainer()
         let m1 = V0_0_1.Test(flag: true, someValue: "1", randomValue: 1)
         let m2 = V0_0_1.Test(flag: true, someValue: "2", randomValue: 2)
@@ -176,7 +176,7 @@ struct WriteCache {
     }
     
     @Test("Fetch excludes unwritten deletes")
-    func fetchExcluedsUnwrittenDeletes() throws {
+    func fetchExcludesUnwrittenDeletes() throws {
         let container = try setupContainer()
         let m1 = V0_0_1.Test(flag: true, someValue: "1", randomValue: 1)
         let m2 = V0_0_1.Test(flag: true, someValue: "2", randomValue: 2)

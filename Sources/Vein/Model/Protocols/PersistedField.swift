@@ -11,7 +11,6 @@ public protocol PersistedField: Sendable {
     var wasTouched: Bool { get set }
     
     static var sqliteTypeName: SQLiteTypeName { get }
-    func setValue(to: WrappedType)
 }
 
 extension PersistedField {

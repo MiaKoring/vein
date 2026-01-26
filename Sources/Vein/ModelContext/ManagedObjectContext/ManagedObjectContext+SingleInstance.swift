@@ -23,7 +23,9 @@ nonisolated final class ThreadSafeIdentityMap {
     }
     
     func removeAll<T: PersistentModel>(of type: T.Type) {
-        cache.value[type.typeIdentifier] = nil
+        cache.mutate { value in
+            value[type.typeIdentifier] = nil
+        }
     }
     
     func getTracked<T: PersistentModel>(_ type: T.Type, id: ULID) -> T? {

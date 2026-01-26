@@ -244,8 +244,9 @@ extension ManagedObjectContext {
         var insertsCopy = WriteCacheDictionary()
         var touchesCopy = WriteCacheDictionary()
         var deletesCopy = WriteCacheDictionary()
+        var primitiveStateCopy = [ObjectIdentifier : [ULID : PrimitiveState]]()
         
-        writeCache.mutate { inserts, touches, deletes,_ in
+        writeCache.mutate { inserts, touches, deletes, primitiveState in
             insertsCopy = inserts
             inserts.removeAll()
             
@@ -254,13 +255,17 @@ extension ManagedObjectContext {
             
             deletesCopy = deletes
             deletes.removeAll()
+            
+            primitiveStateCopy = primitiveState
+            primitiveState.removeAll()
         }
         
         try saveLock.withLock {
-            stagingCache.mutate { inserts, touches, deletes,_ in
+            stagingCache.mutate { inserts, touches, deletes, primitiveState in
                 inserts = insertsCopy
                 touches = touchesCopy
                 deletes = deletesCopy
+                primitiveState = primitiveStateCopy
             }
             
             do {
@@ -299,17 +304,19 @@ extension ManagedObjectContext {
                 }
             } catch {
                 // Re-add changes in case of rollback
-                writeCache.mutate { inserts, touches, deletes,_ in
+                writeCache.mutate { inserts, touches, deletes, primitiveState in
                     insertsCopy.merge(into: &inserts)
                     touchesCopy.merge(into: &touches)
                     deletesCopy.merge(into: &deletes)
+                    primitiveStateCopy.merge(into: &primitiveState)
                 }
                 
                 // Reset staging cache
-                stagingCache.mutate { inserts, touches, deletes,_ in
+                stagingCache.mutate { inserts, touches, deletes, primitiveState in
                     inserts.removeAll()
                     touches.removeAll()
                     deletes.removeAll()
+                    primitiveState.removeAll()
                 }
                 
                 throw error
@@ -329,10 +336,11 @@ extension ManagedObjectContext {
     /// their most recent committed state, and empties the undo stack.
     public nonisolated func rollback() {
         saveLock.withLock {
-            stagingCache.mutate { inserts, touches, deletes,_ in
+            stagingCache.mutate { inserts, touches, deletes, primitiveStages in
                 inserts.removeAll()
                 touches.removeAll()
                 deletes.removeAll()
+                primitiveStages.removeAll()
             }
             
             writeCache.mutate { inserts, touches, deletes, primitiveStates in
@@ -374,6 +382,18 @@ extension WriteCacheDictionary {
     @inline(__always)
     nonisolated func merge(
         into source: inout WriteCacheDictionary
+    ) {
+        for (typeIdentifier, models) in self {
+            source[typeIdentifier, default: [:]]
+                .merge(models) { (current, new) in new }
+        }
+    }
+}
+
+extension [ObjectIdentifier : [ULID : PrimitiveState]] {
+    @inline(__always)
+    nonisolated func merge(
+        into source: inout Self
     ) {
         for (typeIdentifier, models) in self {
             source[typeIdentifier, default: [:]]

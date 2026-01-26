@@ -12,7 +12,7 @@ public final class ModelContainer: @unchecked Sendable {
     public private(set) var context: ManagedObjectContext!
     public let versionedSchema: VersionedSchema.Type
     
-    private var identifierCache = [ObjectIdentifier: any PersistentModel.Type]()
+    private var identifierCache = Atomic([ObjectIdentifier: any PersistentModel.Type]())
     
     private var currentMigration: (any VersionedSchema.Type, any VersionedSchema.Type)?
     
@@ -59,14 +59,9 @@ public final class ModelContainer: @unchecked Sendable {
         self.migration = migration
         self.path = nil
         self.versionedSchema = versionedSchema
-        if let path {
-            self.context = try ManagedObjectContext(
-                path: path,
-                modelContainer: self
-            )
-        } else {
-            self.context = try ManagedObjectContext(modelContainer: self)
-        }
+        self.context = ManagedObjectContext(
+            connection: connection, modelContainer: self
+        )
         
         do {
             try context.createMigrationsTable()
@@ -83,7 +78,9 @@ public final class ModelContainer: @unchecked Sendable {
         defer {
             context.isInActiveMigration.value = false
             currentMigration = nil
-            identifierCache.removeAll()
+            identifierCache.mutate { identifierCache in
+                identifierCache.removeAll()
+            }
         }
         context.isInActiveMigration.value = true
         
@@ -96,7 +93,9 @@ public final class ModelContainer: @unchecked Sendable {
             ) = try determineMigrationStage() {
                 self.currentMigration = (originVersion, destinationVersion)
                 
-                identifierCache.removeAll()
+                identifierCache.mutate { identifierCache in
+                    identifierCache.removeAll()
+                }
                 try migrationBlock?(context)
                 
                 try context.save()
@@ -177,7 +176,11 @@ public final class ModelContainer: @unchecked Sendable {
     }
     
     nonisolated func getSchema(for identifier: ObjectIdentifier) -> (any PersistentModel.Type)? {
-        if let cached = identifierCache[identifier] {
+        if
+            let cached = identifierCache.mutate ({ identifierCache in
+                return identifierCache[identifier]
+            })
+        {
             return cached
         }
         
@@ -191,7 +194,9 @@ public final class ModelContainer: @unchecked Sendable {
             
         for type in potentialModelTypes {
             if type.typeIdentifier == identifier {
-                identifierCache[identifier] = type
+                identifierCache.mutate { identifierCache in
+                    identifierCache[identifier] = type
+                }
                 return type
             }
         }

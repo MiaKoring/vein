@@ -28,8 +28,10 @@ extension ManagedObjectContext {
                     if let _ = currentlyDeleted[id] { continue }
                     
                     if let alreadyTrackedModel = getTracked(T.self, id) {
-                        models.append(alreadyTrackedModel)
-                        resultIDs.insert(alreadyTrackedModel.id)
+                        if predicate.doesMatch(alreadyTrackedModel) {
+                            models.append(alreadyTrackedModel)
+                            resultIDs.insert(alreadyTrackedModel.id)
+                        }
                         continue
                     }
                     var fields = [String: SQLiteValue]()

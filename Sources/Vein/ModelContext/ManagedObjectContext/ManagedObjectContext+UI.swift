@@ -20,13 +20,13 @@ extension ManagedObjectContext {
             task?.cancel()
             task = Task {
                 try? await Task.sleep(for: .milliseconds(50))
-                flushNotifications()
+                await flushNotifications()
             }
         }
     }
     
-    nonisolated func flushNotifications() {
-        Task { @MainActor in
+    nonisolated func flushNotifications() async {
+        await MainActor.run {
             pendingNotifications.mutate({ notifications in
                 for (identifier, models) in notifications {
                     let observers = registeredQueries.value[identifier]
@@ -47,6 +47,6 @@ extension ManagedObjectContext {
     
     public func updateAfterCompletion(with block: () async -> Void) async {
         await block()
-        flushNotifications()
+        await flushNotifications()
     }
 }

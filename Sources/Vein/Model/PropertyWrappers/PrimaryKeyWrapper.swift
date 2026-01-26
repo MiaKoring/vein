@@ -48,8 +48,6 @@ public struct PrimaryKey: PersistedField, @unchecked Sendable {
         self.store = wrappedValue
     }
     
-    public func setValue(to newValue: WrappedType) {}
-    
     public func setStoreToCapturedState(_ state: Any) {}
 }
 
