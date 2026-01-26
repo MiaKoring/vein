@@ -47,6 +47,37 @@ public final class ModelContainer: @unchecked Sendable {
         }
     }
     
+    init(
+        _ versionedSchema: VersionedSchema.Type,
+        migration: SchemaMigrationPlan.Type,
+        connection: Connection
+    ) throws(ManagedObjectContextError) {
+        guard migration.schemas.contains(where: { $0.self == versionedSchema }) else {
+            throw ManagedObjectContextError.schemaNotRegisteredOnMigrationPlan(versionedSchema, migration)
+        }
+        
+        self.migration = migration
+        self.path = nil
+        self.versionedSchema = versionedSchema
+        if let path {
+            self.context = try ManagedObjectContext(
+                path: path,
+                modelContainer: self
+            )
+        } else {
+            self.context = try ManagedObjectContext(modelContainer: self)
+        }
+        
+        do {
+            try context.createMigrationsTable()
+        } catch let error as ManagedObjectContextError { throw error }
+        catch let error as SQLite.Result {
+            throw error.parse()
+        } catch {
+            throw .other(message: error.localizedDescription)
+        }
+    }
+    
     @MainActor
     public func migrate() throws {
         defer {
@@ -65,6 +96,7 @@ public final class ModelContainer: @unchecked Sendable {
             ) = try determineMigrationStage() {
                 self.currentMigration = (originVersion, destinationVersion)
                 
+                identifierCache.removeAll()
                 try migrationBlock?(context)
                 
                 try context.save()
@@ -92,6 +124,10 @@ public final class ModelContainer: @unchecked Sendable {
                 try didFinishMigration?(context)
             }
         }
+    }
+    
+    func getConnection() -> Connection {
+        return context.connection
     }
     
     @MainActor

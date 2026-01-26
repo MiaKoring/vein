@@ -67,6 +67,14 @@ public actor ManagedObjectContext {
             throw .other(message: error.localizedDescription)
         }
     }
+    
+    init(
+        connection: Connection,
+        modelContainer: ModelContainer
+    ) {
+        self.modelContainer = modelContainer
+        self.connection = connection
+    }
 }
 
 

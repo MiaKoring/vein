@@ -4,7 +4,7 @@ import Testing
 @testable import VeinCore
 
 @MainActor
-struct WriteCacheTest {
+struct WriteCache {
     
     private func setupContainer() throws -> ModelContainer {
         let container = try ModelContainer(V0_0_1.self, migration: Migration.self, at: nil)
@@ -155,6 +155,42 @@ struct WriteCacheTest {
             #expect(m1.context == nil)
             #expect(m2.context == nil)
         }
+    }
+    
+    @Test("Fetch includes unwritten changes")
+    func fetchInclusedUnwrittenChanges() throws {
+        let container = try setupContainer()
+        let m1 = V0_0_1.Test(flag: true, someValue: "1", randomValue: 1)
+        let m2 = V0_0_1.Test(flag: true, someValue: "2", randomValue: 2)
+        
+        try container.context.insert(m1)
+        try container.context.save()
+        
+        try container.context.insert(m2)
+        
+        let results = try container.context.fetchAll(V0_0_1.Test.self)
+        
+        #expect(results.count == 2)
+        #expect(results.contains { $0.id == m1.id })
+        #expect(results.contains { $0.id == m2.id })
+    }
+    
+    @Test("Fetch excludes unwritten deletes")
+    func fetchExcluedsUnwrittenDeletes() throws {
+        let container = try setupContainer()
+        let m1 = V0_0_1.Test(flag: true, someValue: "1", randomValue: 1)
+        let m2 = V0_0_1.Test(flag: true, someValue: "2", randomValue: 2)
+        
+        try container.context.insert(m1)
+        try container.context.insert(m2)
+        try container.context.save()
+        
+        try container.context.delete(m1)
+        
+        let results = try container.context.fetchAll(V0_0_1.Test.self)
+        
+        #expect(results.count == 1)
+        #expect(results.contains { $0.id == m2.id })
     }
 }
 

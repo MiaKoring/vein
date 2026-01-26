@@ -14,14 +14,17 @@ extension ManagedObjectContext {
     /// Returns [] if table doesn't exist
     public nonisolated func fetchAll<T: PersistentModel>(_ predicate: PredicateBuilder<T>) throws(MOCError) -> [T] {
         do {
+            guard
+                self.modelContainer.getSchema(for: T.typeIdentifier) != nil
+            else { throw MOCError.inactiveModelTypeFetched(T.self)}
             return try _fetchAll(predicate)
-        } catch {
+        } catch let error as MOCError {
             switch error {
                 case .noSuchTable:
                     return []
                 default: throw error
             }
-        }
+        } catch { throw .other(message: error.localizedDescription)}
     }
     
     /// Returns all models matching the predicate.
@@ -252,10 +255,6 @@ extension ManagedObjectContext {
             deletesCopy = deletes
             deletes.removeAll()
         }
-        
-        print(insertsCopy)
-        print(touchesCopy)
-        print(deletesCopy)
         
         try saveLock.withLock {
             stagingCache.mutate { inserts, touches, deletes,_ in
