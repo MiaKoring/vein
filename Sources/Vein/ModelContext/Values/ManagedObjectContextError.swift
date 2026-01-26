@@ -211,7 +211,7 @@ extension ManagedObjectContextError: LocalizedError {
             case .schemaNotRegisteredOnMigrationPlan:
                 return "Add the versioned schema to the static `schemas` property of the SchemaMigrationPlan."
             case .inactiveModelType, .inactiveModelTypeFetched:
-                return "Make sure to only use up to date Versions of Models and not keep instances of outdated Model versions outside of migrations. Outdated versions are only save to use outside of the context and during their migrations."
+                return "Make sure to only use up to date Versions of Models and not keep instances of outdated Model versions outside of migrations. Outdated versions are only safe to use outside of the context and during their migrations."
             case .dbNewerThanCode:
                 return "Update your app or notify your administrator if no update is available"
             case .other:

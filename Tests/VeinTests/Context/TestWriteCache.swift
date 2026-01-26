@@ -42,7 +42,7 @@ struct WriteCache {
         model.someValue = "Updated"
         
         #expect(container.context.hasChanges == true)
-        container.context.writeCache.mutate { _, touches,_, statesrimar in
+        container.context.writeCache.mutate { _, touches,_, states in
             let typedTouches = touches[V0_0_1.Test.typeIdentifier]
             #expect(typedTouches?[model.id] === model)
             

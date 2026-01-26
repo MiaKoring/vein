@@ -153,7 +153,7 @@ public final class ModelContainer: @unchecked Sendable {
         }
         
         if version > versionedSchema.version {
-            throw 
+            throw MOCError.dbNewerThanCode(version, versionedSchema.version)
         }
         
         var currentSchema: VersionedSchema.Type? = nil
