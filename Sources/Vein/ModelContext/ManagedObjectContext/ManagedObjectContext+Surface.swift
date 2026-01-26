@@ -207,6 +207,8 @@ extension ManagedObjectContext {
                 ][model.id] = nil
                 
                 model.context = nil
+                // I believe this must be done inside the lock for correctness
+                // In case it becomes a performance issue it should be replaced.
                 identityMap.remove(M.self, id: model.id)
             }
         }
@@ -272,8 +274,9 @@ extension ManagedObjectContext {
                 try connection.safeTransaction {
                     // Delete first to avoid theoretically possible uniqueness problems
                     for (identifier, models) in deletesCopy {
-                        guard let _ = modelContainer.getSchema(for: identifier) else {
-                            throw ManagedObjectContextError.inactiveModelType(models.values.first!)
+                        guard modelContainer.getSchema(for: identifier) != nil else {
+                            guard let firstModel = models.values.first else { continue }
+                            throw ManagedObjectContextError.inactiveModelType(firstModel)
                         }
                         
                         for model in models.values {
@@ -282,8 +285,9 @@ extension ManagedObjectContext {
                     }
                     
                     for (identifier, models) in insertsCopy {
-                        guard let _ = modelContainer.getSchema(for: identifier) else {
-                            throw ManagedObjectContextError.inactiveModelType(models.values.first!)
+                        guard modelContainer.getSchema(for: identifier) != nil else {
+                            guard let firstModel = models.values.first else { continue }
+                            throw ManagedObjectContextError.inactiveModelType(firstModel)
                         }
                         
                         for model in models.values {
@@ -292,8 +296,9 @@ extension ManagedObjectContext {
                     }
                     
                     for (identifier, models) in touchesCopy {
-                        guard let _ = modelContainer.getSchema(for: identifier) else {
-                            throw ManagedObjectContextError.inactiveModelType(models.values.first!)
+                        guard modelContainer.getSchema(for: identifier) != nil else {
+                            guard let firstModel = models.values.first else { continue }
+                            throw ManagedObjectContextError.inactiveModelType(firstModel)
                         }
                         
                         for model in models.values {
@@ -385,7 +390,7 @@ extension WriteCacheDictionary {
     ) {
         for (typeIdentifier, models) in self {
             source[typeIdentifier, default: [:]]
-                .merge(models) { (current, new) in new }
+                .merge(models) { (_, new) in new }
         }
     }
 }
@@ -397,7 +402,7 @@ extension [ObjectIdentifier : [ULID : PrimitiveState]] {
     ) {
         for (typeIdentifier, models) in self {
             source[typeIdentifier, default: [:]]
-                .merge(models) { (current, new) in new }
+                .merge(models) { (_, new) in new }
         }
     }
 }

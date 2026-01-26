@@ -69,7 +69,7 @@ public final class LazyField<T: Persistable>: PersistedField, @unchecked Sendabl
         self.store = wrappedValue
     }
     
-    public func setAndNotify(_ newValue: WrappedType) {
+    private func setAndNotify(_ newValue: WrappedType) {
         lock.withLock {
             store = newValue
             model?.notifyOfChanges()
@@ -119,7 +119,7 @@ public final class Field<T: Persistable>: PersistedField, @unchecked Sendable {
             let predicateMatches = context._prepareForChange(of: model)
             setAndNotify(newValue)
             context._markTouched(model, previouslyMatching: predicateMatches)
-            lock .withLock {
+            lock.withLock {
                 self.wasTouched = true
             }
         }

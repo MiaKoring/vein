@@ -25,7 +25,7 @@ extension ManagedObjectContext {
                 for row in results {
                     let id = ULID(ulidString: row[Expression<String>("id")])!
                     
-                    if let _ = currentlyDeleted[id] { continue }
+                    if currentlyDeleted[id] != nil { continue }
                     
                     if let alreadyTrackedModel = getTracked(T.self, id) {
                         if predicate.doesMatch(alreadyTrackedModel) {
@@ -133,9 +133,8 @@ extension ManagedObjectContext {
         
         var nonEmpty = [String]()
         for table in filtered {
-            if try connection.scalar(Table(table).count) > 0 {
-                nonEmpty.append(table)
-            }
+            guard try connection.scalar(Table(table).count) > 0 else { continue }
+            nonEmpty.append(table)
         }
         
         return nonEmpty

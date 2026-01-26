@@ -39,8 +39,9 @@ public final class ModelContainer: @unchecked Sendable {
         
         do {
             try context.createMigrationsTable()
-        } catch let error as ManagedObjectContextError { throw error }
-        catch let error as SQLite.Result {
+        } catch let error as ManagedObjectContextError {
+            throw error
+        } catch let error as SQLite.Result {
             throw error.parse()
         } catch {
             throw .other(message: error.localizedDescription)
@@ -151,7 +152,9 @@ public final class ModelContainer: @unchecked Sendable {
             return nil
         }
         
-        // TODO: add handling of latest table version being larger than the one context was initialized with
+        if version > versionedSchema.version {
+            throw 
+        }
         
         var currentSchema: VersionedSchema.Type? = nil
         
@@ -192,13 +195,11 @@ public final class ModelContainer: @unchecked Sendable {
             potentialModelTypes = versionedSchema.models
         }
             
-        for type in potentialModelTypes {
-            if type.typeIdentifier == identifier {
-                identifierCache.mutate { identifierCache in
-                    identifierCache[identifier] = type
-                }
-                return type
+        for type in potentialModelTypes where type.typeIdentifier == identifier {
+            identifierCache.mutate { identifierCache in
+                identifierCache[identifier] = type
             }
+            return type
         }
         
         return nil

@@ -27,6 +27,7 @@ public enum ManagedObjectContextError: Error {
     case capturedStateApplicationFailed(any Persistable.Type, String)
     case inactiveModelType(any PersistentModel)
     case inactiveModelTypeFetched(any PersistentModel.Type)
+    case dbNewerThanCode(ModelVersion, ModelVersion)
     case other(message: String)
 }
 
@@ -91,6 +92,8 @@ extension ManagedObjectContextError: LocalizedError {
                 return "Attempted CUD operation on inactive model \(model)."
             case .inactiveModelTypeFetched(let model):
                 return "Attempted read operation on inactive model \(model.schema)."
+            case .dbNewerThanCode(let dbVersion, let codeVersion):
+                return "DB version \(dbVersion) is newer than the version used by the model container \(codeVersion)"
             case .other(let message):
                 return "Unexpected: \(message)"
         }
@@ -142,6 +145,8 @@ extension ManagedObjectContextError: LocalizedError {
                 return "Conversion from Any back to WrappedType failed."
             case .inactiveModelType, .inactiveModelTypeFetched:
                 return "Operations are restricted to types belonging to the current version or origin/destination version during an active migration."
+            case .dbNewerThanCode:
+                return "The schema version used by the code must be equal to or newer than the db version."
             case .other:
                 return nil
         }
@@ -207,6 +212,8 @@ extension ManagedObjectContextError: LocalizedError {
                 return "Add the versioned schema to the static `schemas` property of the SchemaMigrationPlan."
             case .inactiveModelType, .inactiveModelTypeFetched:
                 return "Make sure to only use up to date Versions of Models and not keep instances of outdated Model versions outside of migrations. Outdated versions are only save to use outside of the context and during their migrations."
+            case .dbNewerThanCode:
+                return "Update your app or notify your administrator if no update is available"
             case .other:
                 return nil
         }

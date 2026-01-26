@@ -37,7 +37,11 @@ nonisolated final class ThreadSafeIdentityMap {
     }
     
     func getTrackedCount() -> Int {
-        cache.value.reduce(0, { $0 + $1.value.count })
+        cache.value.reduce(0, {
+            $0 + $1.value.count(where: { _, value in
+                !value.isDeallocated
+            })
+        })
     }
     
     func startTracking<T: PersistentModel>(_ object: T) {
@@ -73,11 +77,6 @@ nonisolated final class ThreadSafeIdentityMap {
         cache.mutate { contents in
             _ = contents[type]?.removeValue(forKey: id)
         }
-    }
-    
-    @inline(__always)
-    private static func key<T: PersistentModel>(_ type: T.Type) -> ObjectIdentifier {
-        ObjectIdentifier(type)
     }
     
     func compact() {

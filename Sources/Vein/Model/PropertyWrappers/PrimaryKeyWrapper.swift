@@ -23,7 +23,9 @@ public struct PrimaryKey: PersistedField, @unchecked Sendable {
         }
         set {
             lock.withLock({
-                store = newValue
+                if model?.context == nil {
+                    store = newValue
+                }
             })
         }
     }
@@ -48,6 +50,7 @@ public struct PrimaryKey: PersistedField, @unchecked Sendable {
         self.store = wrappedValue
     }
     
+    /// No-op: Primary key is immutable after insertion and doesn't participate in rollback.
     public func setStoreToCapturedState(_ state: Any) {}
 }
 
