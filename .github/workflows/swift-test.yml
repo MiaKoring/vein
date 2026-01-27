@@ -19,7 +19,6 @@ jobs:
       - name: Resolve & Test
         run: |
           rm -f Package.resolved
-          swift package resolve
           swift package clean
           swift package resolve
           swift test
