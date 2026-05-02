@@ -29,7 +29,8 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-crypto.git", "1.0.0" ..< "5.0.0"),
         .package(url: "https://github.com/swiftlang/swift-syntax.git", "600.0.0" ..< "610.0.0"),
         .package(url: "https://github.com/apple/swift-log.git", .upToNextMajor(from: "1.9.1")),
-        .package(url: "https://github.com/yaslab/ULID.swift", .upToNextMajor(from: "1.3.1"))
+        .package(url: "https://github.com/yaslab/ULID.swift", .upToNextMajor(from: "1.3.1")),
+        .package(url: "https://github.com/kishikawakatsumi/keychainaccess", .upToNextMajor(from: "4.2.2"))
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -39,7 +40,8 @@ let package = Package(
             dependencies: [
                 .product(name: "Crypto", package: "swift-crypto"),
                 .product(name: "SQLiteDB", package: "swift-sqlcipher"),
-                .product(name: "ULID", package: "ULID.swift")
+                .product(name: "ULID", package: "ULID.swift"),
+                .product(name: "KeychainAccess", package: "keychainaccess"),
             ]
         ),
         .target(

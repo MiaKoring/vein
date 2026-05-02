@@ -1,6 +1,10 @@
 import SQLiteDB
 import Foundation
 import ULID
+import Crypto
+#if canImport(AppKit) || canImport(UIKit)
+import KeychainAccess
+#endif
 
 public actor ManagedObjectContext {
     public static nonisolated(unsafe) var shared: ManagedObjectContext?
@@ -46,6 +50,10 @@ public actor ManagedObjectContext {
         self.modelContainer = modelContainer
         do {
             self.connection = try Connection(path)
+            #if canImport(AppKit) || canImport(UIKit)
+            try self.connection.key(Self.getKeyForDatabase(at: path))
+            #endif
+            
             try self.connection.execute("PRAGMA journal_mode=WAL;")
         } catch let error as SQLiteDB.Result {
             throw error.parse()
@@ -74,6 +82,28 @@ public actor ManagedObjectContext {
     ) {
         self.modelContainer = modelContainer
         self.connection = connection
+    }
+    
+    public static func getKeyForDatabase(at path: String) -> String {
+        let url = URL(fileURLWithPath: path)
+        let fileName = url.lastPathComponent
+        
+        #if canImport(AppKit) || canImport(UIKit)
+        let appID = Bundle.main.bundleIdentifier ?? "com.fallback.id"
+        let keychain = Keychain(service: "com.amethyst.framework.sqlcipher.\(appID)")
+        
+        if let key = keychain[fileName] {
+            return key
+        } else {
+            let keyData = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
+            let hexKey = keyData.map { String(format: "%02hhx", $0) }.joined()
+            
+            keychain[fileName] = hexKey
+            return hexKey
+        }
+        #else
+        return ""
+        #endif
     }
 }
 
