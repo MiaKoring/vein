@@ -1,6 +1,6 @@
 import SQLiteDB
 import Foundation
-import SQLite3
+import SQLCipher
 
 extension ManagedObjectContext {
     public nonisolated func transaction(_ block: @escaping () throws -> Void) throws {
