@@ -1,4 +1,5 @@
 import SQLiteDB
+import Foundation
 
 public enum UnderlayingFieldType {
     case uuid(required: Bool = false)
@@ -40,9 +41,9 @@ extension UnderlayingFieldType {
                 }
             case .data(let required):
                 if required {
-                    table.column(SQLExpression<SQLiteDB.Blob>(name))
+                    table.column(SQLExpression<Data>(name))
                 } else {
-                    table.column(SQLExpression<SQLiteDB.Blob?>(name))
+                    table.column(SQLExpression<Data?>(name))
                 }
         }
     }
