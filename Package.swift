@@ -4,6 +4,16 @@
 import PackageDescription
 import CompilerPluginSupport
 
+var veinDependencies: [Target.Dependency] = [
+    .product(name: "Crypto", package: "swift-crypto"),
+    .product(name: "SQLiteDB", package: "swift-sqlcipher"),
+    .product(name: "ULID", package: "ULID.swift")
+]
+
+#if canImport(AppKit) || canImport(UIKit)
+    veinDependencies.append(.product(name: "KeychainAccess", package: "keychainaccess"))
+#endif
+
 let package = Package(
     name: "amethyst-vein",
     platforms: [.macOS(.v13), .iOS(.v16), .tvOS(.v16), .macCatalyst(.v16), .visionOS(.v1)],
@@ -37,12 +47,7 @@ let package = Package(
         // Targets can depend on other targets in this package and products from dependencies.
         .target(
             name: "Vein",
-            dependencies: [
-                .product(name: "Crypto", package: "swift-crypto"),
-                .product(name: "SQLiteDB", package: "swift-sqlcipher"),
-                .product(name: "ULID", package: "ULID.swift"),
-                .product(name: "KeychainAccess", package: "keychainaccess"),
-            ]
+            dependencies: veinDependencies
         ),
         .target(
             name: "VeinCore",
