@@ -90,7 +90,7 @@ public actor ManagedObjectContext {
         
         #if canImport(AppKit) || canImport(UIKit)
         let appID = Bundle.main.bundleIdentifier ?? "com.fallback.id"
-        let keychain = Keychain(service: "com.amethyst.framework.sqlcipher.\(appID)")
+        let keychain = Keychain(service: "com.amethyst.vein.sqlcipher.\(appID)")
         
         if let key = keychain[fileName] {
             return key
