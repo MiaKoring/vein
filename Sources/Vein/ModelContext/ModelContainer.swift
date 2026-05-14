@@ -21,7 +21,20 @@ public final class ModelContainer: @unchecked Sendable {
     public let encryptionEnabled: Bool
     
     
-    /// If using encryption on Linux, set app identifier before using model context.
+    /// Manages the schema and storage for a Vein database.
+    ///
+    /// - Parameter appID: A unique identifier used per-database to construct the keyring
+    ///   service string: `"com.amethyst.vein.sqlcipher.\(appID)"`.
+    ///
+    /// - Note: `Keyring.appIdentifier` is a global, one-time configuration for the
+    ///   underlying `KeyringAccess` library, typically set once per process or environment.
+    ///   It should represent the application bundle or organization identity.
+    ///
+    ///   `Keyring.appIdentifier` does not need to match the `appID` parameter. If they
+    ///   differ, `KeyringAccess` uses the global identifier for internal namespacing while
+    ///   continuing to store and retrieve items using the service string derived from `appID`.
+    ///
+    /// On Linux, set `Keyring.appIdentifier` before creating any `ModelContainer` instances:
     /// ```swift
     /// #if os(Linux)
     ///     import Vein
@@ -68,7 +81,20 @@ public final class ModelContainer: @unchecked Sendable {
         }
     }
     
-    /// If using encryption on Linux, set app identifier before using model context.
+    /// Manages the schema and storage for a Vein database.
+    ///
+    /// - Parameter appID: A unique identifier used per-database to construct the keyring
+    ///   service string: `"com.amethyst.vein.sqlcipher.\(appID)"`.
+    ///
+    /// - Note: `Keyring.appIdentifier` is a global, one-time configuration for the
+    ///   underlying `KeyringAccess` library, typically set once per process or environment.
+    ///   It should represent the application bundle or organization identity.
+    ///
+    ///   `Keyring.appIdentifier` does not need to match the `appID` parameter. If they
+    ///   differ, `KeyringAccess` uses the global identifier for internal namespacing while
+    ///   continuing to store and retrieve items using the service string derived from `appID`.
+    ///
+    /// On Linux, set `Keyring.appIdentifier` before creating any `ModelContainer` instances:
     /// ```swift
     /// #if os(Linux)
     ///     import Vein
