@@ -13,7 +13,8 @@ extension MigrationTests {
                 Version0_0_2.self,
                 migration: MigrationPlan.self,
                 at: path,
-                appID: "de.amethystsoft.vein.MigrationTests"
+                appID: "de.amethystsoft.vein.MigrationTests",
+                encryptionEnabled: ProcessInfo.shouldEnableEncryption
             )
         } catch {
             if

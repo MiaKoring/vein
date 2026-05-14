@@ -4,6 +4,7 @@ import Testing
 @testable import VeinCore
 
 @MainActor
+@Suite(.serialized)
 struct ModelContainerTests {
     private func setupContainer() throws -> ModelContainer {
         let container = try ModelContainer(
@@ -21,7 +22,8 @@ struct ModelContainerTests {
             V0_0_2.self,
             migration: Migration.self,
             at: nil,
-            appID: "de.amethystsoft.vein.ModelContainerTests"
+            appID: "de.amethystsoft.vein.ModelContainerTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         let model = V0_0_2.Test(flag: false, someValue: "xyz", securityCode: "zyx")
         try container.context.insert(model)
@@ -31,7 +33,8 @@ struct ModelContainerTests {
             V0_0_1.self,
             migration: Migration.self,
             connection: container.getConnection(),
-            appID: "de.amethystsoft.vein.ModelContainerTests"
+            appID: "de.amethystsoft.vein.ModelContainerTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         do {

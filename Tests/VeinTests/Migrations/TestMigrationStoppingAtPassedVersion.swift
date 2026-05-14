@@ -11,7 +11,8 @@ extension MigrationTests {
             Version0_0_1.self,
             migration: MigrationPlan.self,
             at: path,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         let initial = Version0_0_1.BasicModel(field: "how did we get here")
@@ -29,7 +30,8 @@ extension MigrationTests {
             Version0_0_2.self,
             migration: MigrationPlan.self,
             at: path,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         try newContainer.migrate()

@@ -7,6 +7,12 @@ import VeinCore
 struct WholeChain {
     @Test
     func wholeChainMigration() async throws {
+#if os(Linux)
+        Keyring.appIdentifier.withLock { identifier in
+            identifier = "de.amethystsoft.vein.tests"
+        }
+#endif
+        
         let tester = try MigrationTester(migrationPlan: MigrationPlan.self)
         
         let username = "miakoring"

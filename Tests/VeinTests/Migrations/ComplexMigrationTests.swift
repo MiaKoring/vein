@@ -7,6 +7,7 @@ import Logging
 let testID = UUID()
 
 @MainActor
+@Suite(.serialized)
 struct MigrationTests {
     let logger = Logger(label: "de.amethystsoft.vein.test.migration")
     
@@ -22,7 +23,8 @@ struct MigrationTests {
             ComplexSchemaV0_0_1.self,
             migration: ComplexMigrationSuccess.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         // Create initial models
@@ -52,7 +54,8 @@ struct MigrationTests {
             ComplexSchemaV0_0_2.self,
             migration: ComplexMigrationSuccess.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         try newContainer.migrate()
         
@@ -69,6 +72,12 @@ struct MigrationTests {
     }
     
     func prepareContainerLocation(name: String) throws -> String {
+#if os(Linux)
+        Keyring.appIdentifier.withLock { identifier in
+            identifier = "de.amethystsoft.vein.tests"
+        }
+#endif
+        
         let containerPath = FileManager.default.temporaryDirectory
         
         let dbDir = containerPath.relativePath.appending("/veinTests/\(testID.uuidString)")

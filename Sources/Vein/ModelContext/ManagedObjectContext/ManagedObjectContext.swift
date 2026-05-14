@@ -4,6 +4,8 @@ import ULID
 import Crypto
 #if canImport(AppKit) || canImport(UIKit)
 import KeychainAccess
+#elseif os(Linux)
+@_exported import KeyringAccess
 #endif
 
 public actor ManagedObjectContext {
@@ -51,15 +53,17 @@ public actor ManagedObjectContext {
         do {
             self.connection = try Connection(path)
             
-            #if canImport(AppKit) || canImport(UIKit)
-            guard let key = Self.getKeyForDatabase(
-                at: path,
-                appID: modelContainer.appID
-            ) else {
-                fatalError("Vein: Failed to retrieve/save key to encrypt Database.")
+            #if canImport(AppKit) || canImport(UIKit) || os(Linux)
+            if modelContainer.encryptionEnabled {
+                guard
+                    let key = Self.getKeyForDatabase(
+                        at: path,
+                        appID: modelContainer.appID
+                    ) else {
+                    fatalError("Vein: Failed to retrieve/save key to encrypt Database.")
+                }
+                try self.connection.key(key)
             }
-            try self.connection.key(key)
-                
             #endif
             
             try self.connection.execute("PRAGMA journal_mode=WAL;")
@@ -111,7 +115,19 @@ public actor ManagedObjectContext {
             return hexKey
         }
         #else
-        return nil
+        let keyring = Keyring(service: "com.amethyst.vein.sqlcipher.\(appID)")
+        
+        if let key = keyring[fileName] {
+            return key
+        } else {
+            let keyData = SymmetricKey(size: .bits256).withUnsafeBytes { Data($0) }
+            let hexKey = keyData.map { String(format: "%02hhx", $0) }.joined()
+            
+            guard let _ = try? keyring.set(hexKey, for: fileName) else {
+                return nil
+            }
+            return hexKey
+        }
         #endif
     }
 }

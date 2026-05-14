@@ -18,12 +18,27 @@ public final class ModelContainer: @unchecked Sendable {
     
     public let appID: String
     
+    public let encryptionEnabled: Bool
+    
+    
+    /// If using encryption on Linux, set app identifier before using model context.
+    /// ```swift
+    /// #if os(Linux)
+    ///     import Vein
+    ///
+    ///     Keyring.appIdentifier.withLock { identifier in
+    ///         identifier = "com.example.yourapp"
+    ///     }
+    /// #endif
+    /// ```
     public init(
         _ versionedSchema: VersionedSchema.Type,
         migration: SchemaMigrationPlan.Type,
         at path: String?,
-        appID: String
+        appID: String,
+        encryptionEnabled: Bool = true
     ) throws(ManagedObjectContextError) {
+        self.encryptionEnabled = encryptionEnabled
         self.appID = appID
         
         guard migration.schemas.contains(where: { $0.self == versionedSchema }) else {
@@ -53,12 +68,24 @@ public final class ModelContainer: @unchecked Sendable {
         }
     }
     
+    /// If using encryption on Linux, set app identifier before using model context.
+    /// ```swift
+    /// #if os(Linux)
+    ///     import Vein
+    ///
+    ///     Keyring.appIdentifier.withLock { identifier in
+    ///         identifier = "com.example.yourapp"
+    ///     }
+    /// #endif
+    /// ```
     init(
         _ versionedSchema: VersionedSchema.Type,
         migration: SchemaMigrationPlan.Type,
         connection: Connection,
-        appID: String
+        appID: String,
+        encryptionEnabled: Bool = true
     ) throws(ManagedObjectContextError) {
+        self.encryptionEnabled = encryptionEnabled
         self.appID = appID
         
         guard migration.schemas.contains(where: { $0.self == versionedSchema }) else {
