@@ -1,4 +1,4 @@
-name: ci
+name: Swift Tes (Android)
 on:
   push:
     branches: [main]
