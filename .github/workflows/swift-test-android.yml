@@ -1,4 +1,4 @@
-name: Swift Tes (Android)
+name: Swift Test (Android)
 on:
   push:
     branches: [main]
