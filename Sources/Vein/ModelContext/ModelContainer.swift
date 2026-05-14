@@ -18,12 +18,40 @@ public final class ModelContainer: @unchecked Sendable {
     
     public let appID: String
     
+    public let encryptionEnabled: Bool
+    
+    
+    /// Manages the schema and storage for a Vein database.
+    ///
+    /// - Parameter appID: A unique identifier used per-database to construct the keyring
+    ///   service string: `"com.amethyst.vein.sqlcipher.\(appID)"`.
+    ///
+    /// - Note: `Keyring.appIdentifier` is a global, one-time configuration for the
+    ///   underlying `KeyringAccess` library, typically set once per process or environment.
+    ///   It should represent the application bundle or organization identity.
+    ///
+    ///   `Keyring.appIdentifier` does not need to match the `appID` parameter. If they
+    ///   differ, `KeyringAccess` uses the global identifier for internal namespacing while
+    ///   continuing to store and retrieve items using the service string derived from `appID`.
+    ///
+    /// On Linux, set `Keyring.appIdentifier` before creating any `ModelContainer` instances:
+    /// ```swift
+    /// #if os(Linux)
+    ///     import Vein
+    ///
+    ///     Keyring.appIdentifier.withLock { identifier in
+    ///         identifier = "com.example.yourapp"
+    ///     }
+    /// #endif
+    /// ```
     public init(
         _ versionedSchema: VersionedSchema.Type,
         migration: SchemaMigrationPlan.Type,
         at path: String?,
-        appID: String
+        appID: String,
+        encryptionEnabled: Bool = true
     ) throws(ManagedObjectContextError) {
+        self.encryptionEnabled = encryptionEnabled
         self.appID = appID
         
         guard migration.schemas.contains(where: { $0.self == versionedSchema }) else {
@@ -53,12 +81,37 @@ public final class ModelContainer: @unchecked Sendable {
         }
     }
     
+    /// Manages the schema and storage for a Vein database.
+    ///
+    /// - Parameter appID: A unique identifier used per-database to construct the keyring
+    ///   service string: `"com.amethyst.vein.sqlcipher.\(appID)"`.
+    ///
+    /// - Note: `Keyring.appIdentifier` is a global, one-time configuration for the
+    ///   underlying `KeyringAccess` library, typically set once per process or environment.
+    ///   It should represent the application bundle or organization identity.
+    ///
+    ///   `Keyring.appIdentifier` does not need to match the `appID` parameter. If they
+    ///   differ, `KeyringAccess` uses the global identifier for internal namespacing while
+    ///   continuing to store and retrieve items using the service string derived from `appID`.
+    ///
+    /// On Linux, set `Keyring.appIdentifier` before creating any `ModelContainer` instances:
+    /// ```swift
+    /// #if os(Linux)
+    ///     import Vein
+    ///
+    ///     Keyring.appIdentifier.withLock { identifier in
+    ///         identifier = "com.example.yourapp"
+    ///     }
+    /// #endif
+    /// ```
     init(
         _ versionedSchema: VersionedSchema.Type,
         migration: SchemaMigrationPlan.Type,
         connection: Connection,
-        appID: String
+        appID: String,
+        encryptionEnabled: Bool = true
     ) throws(ManagedObjectContextError) {
+        self.encryptionEnabled = encryptionEnabled
         self.appID = appID
         
         guard migration.schemas.contains(where: { $0.self == versionedSchema }) else {

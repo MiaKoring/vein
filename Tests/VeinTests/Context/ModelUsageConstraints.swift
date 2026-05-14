@@ -4,8 +4,15 @@ import Testing
 @testable import VeinCore
 
 @MainActor
+@Suite(.serialized)
 struct ModelUsageConstraints {
     func prepareContainerLocation(name: String) throws -> String {
+#if os(Linux)
+        Keyring.appIdentifier.withLock { identifier in
+            identifier = "de.amethystsoft.vein.tests"
+        }
+#endif
+        
         let containerPath = FileManager.default.temporaryDirectory
         
         let dbDir = containerPath.relativePath.appending("/veinTests/\(testID.uuidString)")
@@ -34,7 +41,8 @@ struct ModelUsageConstraints {
             V0_0_2.self,
             migration: Migration.self,
             at: path,
-            appID: "de.amethystsoft.vein.ModelUsageConstraints"
+            appID: "de.amethystsoft.vein.ModelUsageConstraints",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         let model = V0_0_2.Test(flag: true, someValue: "blubb", securityCode: "very secure code")
         try container.context.insert(model)
@@ -44,7 +52,8 @@ struct ModelUsageConstraints {
             V0_0_3.self,
             migration: Migration.self,
             at: path,
-            appID: "de.amethystsoft.vein.ModelUsageConstraints"
+            appID: "de.amethystsoft.vein.ModelUsageConstraints",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         do {
@@ -70,7 +79,8 @@ struct ModelUsageConstraints {
             V0_0_2.self,
             migration: Migration.self,
             at: nil,
-            appID: "de.amethystsoft.vein.ModelUsageConstraints"
+            appID: "de.amethystsoft.vein.ModelUsageConstraints",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         do {
@@ -93,7 +103,8 @@ struct ModelUsageConstraints {
             V0_0_2.self,
             migration: Migration.self,
             at: nil,
-            appID: "de.amethystsoft.vein.ModelUsageConstraints"
+            appID: "de.amethystsoft.vein.ModelUsageConstraints",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         let model = V0_0_1.Test(flag: true, someValue: "xyz", randomValue: 122)
         model.context = container.context
@@ -123,7 +134,8 @@ struct ModelUsageConstraints {
             V0_0_2.self,
             migration: Migration.self,
             at: nil,
-            appID: "de.amethystsoft.vein.ModelUsageConstraints"
+            appID: "de.amethystsoft.vein.ModelUsageConstraints",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         let model = V0_0_1.Test(flag: true, someValue: "xyz", randomValue: 122)
         model.context = container.context

@@ -4,14 +4,22 @@ import Testing
 @testable import VeinCore
 
 @MainActor
+@Suite(.serialized)
 struct WriteCache {
     
     private func setupContainer() throws -> ModelContainer {
+#if os(Linux)
+        Keyring.appIdentifier.withLock { identifier in
+            identifier = "de.amethystsoft.vein.tests"
+        }
+#endif
+        
         let container = try ModelContainer(
             V0_0_1.self,
             migration: Migration.self,
             at: nil,
-            appID: "de.amethystsoft.vein.WriteCache"
+            appID: "de.amethystsoft.vein.WriteCache",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         return container
     }

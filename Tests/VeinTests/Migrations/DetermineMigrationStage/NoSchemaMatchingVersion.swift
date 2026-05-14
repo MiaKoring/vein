@@ -11,7 +11,8 @@ extension MigrationTests {
             Version0_0_1.self,
             migration: SetupMigrationPlan.self,
             at: path,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         let originModel = Version0_0_1.BasicModel(field: "very important content")
         try container.context.insert(originModel)
@@ -21,7 +22,8 @@ extension MigrationTests {
             Version0_0_2.self,
             migration: MigrationPlan.self,
             at: path,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         do {
             try newContainer.migrate()

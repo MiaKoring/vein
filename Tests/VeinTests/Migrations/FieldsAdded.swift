@@ -17,7 +17,8 @@ extension MigrationTests {
             SimpleSchemaV0_0_3.self,
             migration: SimpleMigration.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         let test = SimpleSchemaV0_0_3.AddingFieldsModel(value: "")
@@ -38,7 +39,8 @@ extension MigrationTests {
             SimpleSchemaV0_0_4.self,
             migration: SimpleMigration.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         try newContainer.migrate()
         
@@ -62,7 +64,8 @@ extension MigrationTests {
             SimpleSchemaV0_0_1.self,
             migration: SimpleMigration.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         // Entering migration manually
@@ -103,7 +106,8 @@ extension MigrationTests {
             SimpleSchemaV0_0_1.self,
             migration: SimpleMigration.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         // Entering migration manually
@@ -143,7 +147,8 @@ extension MigrationTests {
             SimpleSchemaV0_0_3.self,
             migration: SimpleMigration.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         // Entering migration manually
@@ -183,7 +188,8 @@ extension MigrationTests {
             SimpleSchemaV0_0_3.self,
             migration: SimpleMigration.self,
             at: dbPath,
-            appID: "de.amethystsoft.vein.MigrationTests"
+            appID: "de.amethystsoft.vein.MigrationTests",
+            encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
         
         // Entering migration manually
