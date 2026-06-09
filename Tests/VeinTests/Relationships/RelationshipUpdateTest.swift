@@ -5,10 +5,10 @@ import Logging
 @testable import VeinCore
 
 @MainActor
-@Suite struct RelationshipTest {
+@Suite struct RelationshipUpdateTest {
     static let logger = Logger(label: "de.amethystsoft.vein.test.migration")
     
-    @Test func testPersist() async throws {
+    @Test func testUpdate() async throws {
         let dbPath = try prepareContainerLocation(name: "RelationshipMigration")
         
         Self.logger.info(
@@ -25,42 +25,16 @@ import Logging
         
         let user = V0_0_1.User(name: "Mia")
         let comment = V0_0_1.Comment(text: "Heyho")
-        user.comments.append(comment)
         
         try container.context.insert(user)
+        user.comments.append(comment)
+        
         try container.context.save()
         
-        let oldUsers = try container.context.fetchAll(V0_0_1.User.self)
-        
-        #expect(oldUsers.count == 1 && oldUsers.first?.id == user.id)
-        
-        let storedSchemas = try container.context.getAllStoredSchemas()
-        
-        #expect(
-            storedSchemas.sorted() == [
-                V0_0_1.User.schema,
-                V0_0_1.Comment.schema
-            ].sorted()
-        )
-        
-        // Create new container & trigger migration
-        let newContainer = try ModelContainer(
-            V0_0_2.self,
-            migration: Migration.self,
-            at: dbPath,
-            appID: "de.amethystsoft.vein.RelationshipTests",
-            encryptionEnabled: ProcessInfo.shouldEnableEncryption
-        )
-        try newContainer.migrate()
-        
-        let first = try newContainer.context.fetchAll(V0_0_2.User._PredicateHelper()._builder()).first
-        
-        #expect(first?.is2faEnabled == false)
-        #expect(first?.name == "Mia")
-        #expect(first?.comments.contains(where: { $0.id == comment.id }) == true)
-        
-        let newStoredSchemas = try newContainer.context.getAllStoredSchemas()
-        #expect(newStoredSchemas.sorted() == [V0_0_2.User.schema, V0_0_2.Comment.schema].sorted())
+        #expect(user.comments.contains { $0.id == comment.id })
+        #expect(user.context != nil)
+        #expect(comment.context?.identifier == user.context?.identifier)
+        #expect(comment.author?.id == user.id)
     }
     
     func prepareContainerLocation(name: String) throws -> String {
@@ -101,18 +75,21 @@ fileprivate enum V0_0_1: VersionedSchema {
         @Field
         var name: String
         
-        @Relationship
+        @Relationship(inverse: "author")
         var comments: [Comment]
         
         init(name: String) {
             self.name = name
-            self.comments = []
+        }
+        
+        func commentIDs() -> [ULID] {
+            _comments.idStore
         }
     }
     
     @Model
     final class Comment: Identifiable {
-        @Relationship(inverse: \User.comments, deleteRule: .cascade)
+        @Relationship(inverse: "comments", deleteRule: .cascade)
         var author: User?
         
         @Field
@@ -120,7 +97,6 @@ fileprivate enum V0_0_1: VersionedSchema {
         
         init(text: String) {
             self.text = text
-            self.author = nil
         }
     }
 }
@@ -134,7 +110,7 @@ fileprivate enum V0_0_2: VersionedSchema {
         @Field
         var name: String
         
-        @Relationship
+        @Relationship(inverse: "author")
         var comments: [Comment]
         
         @Field
@@ -142,13 +118,12 @@ fileprivate enum V0_0_2: VersionedSchema {
         
         init(name: String) {
             self.name = name
-            self.comments = []
         }
     }
     
     @Model
     final class Comment: Identifiable {
-        @Relationship(inverse: \User.comments)
+        @Relationship(inverse: "comments")
         var author: User?
         
         @Field
@@ -156,7 +131,6 @@ fileprivate enum V0_0_2: VersionedSchema {
         
         init(text: String) {
             self.text = text
-            self.author = nil
         }
     }
 }

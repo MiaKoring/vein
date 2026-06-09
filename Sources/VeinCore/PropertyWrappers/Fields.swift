@@ -109,6 +109,28 @@ public final class LazyField<T: Persistable>: PersistedField, @unchecked Sendabl
         get { wrappedValue }
         set { wrappedValue = newValue }
     }
+    
+    // Connect model instance to wrapper.
+    public static subscript<OuterSelf: PersistentModel>(
+        _enclosingInstance observed: OuterSelf,
+        wrapped wrappedKeyPath: ReferenceWritableKeyPath<OuterSelf, T?>,
+        storage storageKeyPath: ReferenceWritableKeyPath<OuterSelf, LazyField<T>>
+    ) -> T? {
+        get {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            return storage.wrappedValue
+        }
+        set {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            storage.wrappedValue = newValue
+        }
+    }
 }
 
 @propertyWrapper
@@ -184,5 +206,27 @@ public final class Field<T: Persistable>: PersistedField, @unchecked Sendable {
     public var persistableValue: T {
         get { wrappedValue }
         set { wrappedValue = newValue }
+    }
+    
+    // Connect model instance to wrapper.
+    public static subscript<OuterSelf: PersistentModel>(
+        _enclosingInstance observed: OuterSelf,
+        wrapped wrappedKeyPath: ReferenceWritableKeyPath<OuterSelf, T>,
+        storage storageKeyPath: ReferenceWritableKeyPath<OuterSelf, Field<T>>
+    ) -> T {
+        get {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            return storage.wrappedValue
+        }
+        set {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            storage.wrappedValue = newValue
+        }
     }
 }

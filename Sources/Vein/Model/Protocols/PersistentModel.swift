@@ -27,7 +27,7 @@ public protocol PersistentModel: AnyObject, Sendable {
 extension PersistentModel {
     public static var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
     public var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
-    func _getSchema() -> String { Self.schema }
+    public func _getSchema() -> String { Self.schema }
     
     public func extractPrimitiveState() -> PrimitiveState {
         var data = [String: Any]()

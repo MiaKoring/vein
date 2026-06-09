@@ -1,14 +1,19 @@
 import Foundation
 import Vein
+import Logging
 
 @propertyWrapper
-public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, @unchecked Sendable {
+public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, OneRelationship, @unchecked Sendable {
     public let isLazy: Bool = false
     public typealias Value = T?
     public typealias WrappedType = ULID?
     
     private let lock = NSLock()
-    private var store: Value
+    private var store: Value {
+        didSet {
+            idStore = store?.id
+        }
+    }
     private var idStore: ULID?
     public var inverseKey: String?
     public var deleteRule: DeleteRule
@@ -41,9 +46,6 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
                 guard let id = idStore else { return nil }
                 do {
                     let result = try context.getModel(id: id, type: T.self)
-                    if inverseKey.isNil {
-                        store = result
-                    }
                     return result
                 } catch let error as ManagedObjectContextError {
                     if case .noSuchTable = error {
@@ -60,7 +62,31 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
             guard
                 let model = model,
                 let context = model.context
-            else { return setAndNotify(newValue) }
+            else {
+                fatalError("""
+                Relationships require a context for setting. \
+                Insert the model before adding relationships.
+                """)
+            }
+            
+            do {
+                if
+                    let newValue,
+                    newValue.context.isNil
+                {
+                    try context.insert(newValue)
+                } else if
+                    let newValue,
+                    newValue.context?.identifier != context.identifier
+                {
+                    fatalError("""
+                Tried set model from different context as relationship. \
+                Schema: \(model._getSchema())
+                """)
+                }
+            } catch {
+                fatalError(error.localizedDescription)
+            }
             
             let predicateMatches = context._prepareForChange(of: model)
             setAndNotify(newValue)
@@ -69,15 +95,6 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
             wasTouched = true
         }
     }
-    
-    /* TODO: add async fetch
-     public func readAsynchronously() async throws -> T? {
-     guard let context = model?.context else {
-     return store
-     }
-     return try await context.fetchSingleProperty(field: self)
-     }
-     */
     
     public init(
         inverse: String? = nil,
@@ -91,17 +108,65 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
     }
     
     private func setAndNotify(_ newValue: Value) {
-        lock.withLock {
-            store = newValue
+        let newID = newValue?.id
+        let isDifferent = idStore != newID
+        
+        if isDifferent {
+            // Disconnect from the old relation first while wrappedValue points to it.
+            updateOtherSide(isRemoving: true)
         }
+        
+        lock.withLock {
+            if (model?.context).isNil {
+                store = newValue
+            } else {
+                idStore = newID
+            }
+        }
+        
+        if isDifferent {
+            // Connect to the new relation now that wrappedValue points to it.
+            updateOtherSide(isRemoving: false)
+        }
+        
         model?.notifyOfChanges()
+    }
+    
+    private func updateOtherSide(isRemoving: Bool) {
+        guard
+            let model,
+            let inverseKey,
+            let target = wrappedValue
+        else { return }
+        
+        let matchingField = target._fields.first { $0.key == inverseKey }
+        
+        defer {
+            matchingField?.model?.notifyOfChanges()
+        }
+        
+        if var manyField = matchingField as? ManyRelationship {
+            if isRemoving {
+                manyField.persistableValue.removeAll { $0 == model.id }
+            } else if !manyField.persistableValue.contains(model.id) {
+                manyField.persistableValue.append(model.id)
+            }
+        } else if var oneField = matchingField as? OneRelationship {
+            oneField.persistableValue = isRemoving ? nil : model.id
+        }
     }
     
     public func setStoreToCapturedState(_ state: Any) {
         lock.withLock {
             guard let value = state as? T else {
-                //fatalError(ManagedObjectContextError.capturedStateApplicationFailed(WrappedType.self, instanceKey).localizedDescription)
-                return
+                fatalError(
+                    ManagedObjectContextError
+                        .capturedStateApplicationFailed(
+                            ULID.self,
+                            instanceKey
+                        )
+                        .localizedDescription
+                )
             }
             self.store = value
             self.idStore = value.id
@@ -113,17 +178,43 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
         get { idStore }
         set { idStore = newValue }
     }
+    
+    // Connect model instance to wrapper.
+    public static subscript<OuterSelf: PersistentModel>(
+        _enclosingInstance observed: OuterSelf,
+        wrapped wrappedKeyPath: ReferenceWritableKeyPath<OuterSelf, T?>,
+        storage storageKeyPath: ReferenceWritableKeyPath<OuterSelf, _OneRelationship<T>>
+    ) -> T? {
+        get {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            return storage.wrappedValue
+        }
+        set {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            storage.wrappedValue = newValue
+        }
+    }
 }
 
 @propertyWrapper
-public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship, @unchecked Sendable {
+public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship, ManyRelationship, @unchecked Sendable {
     public typealias Value = [T]
     public typealias PersistableRepresentation = [ULID]
     
     public let isLazy: Bool = false
     private let lock = NSLock()
-    private var store: Value
-    private var idStore: [ULID]
+    private var store: Value {
+        didSet {
+            idStore = store.map(\.id)
+        }
+    }
+    var idStore: [ULID]
     public var inverseKey: String?
     public var deleteRule: DeleteRule
     
@@ -154,11 +245,8 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
                 guard let context = model?.context else { return store }
                 guard !idStore.isEmpty else { return [] }
                 do {
-                    /*let result = try context.getModel(id: id, type: T.self)
-                    if inverse.isNil {
-                        store = result
-                    }
-                    return result*/return []
+                    let result = try context.getModels(ids: idStore, type: T.self)
+                    return result
                 } catch let error as ManagedObjectContextError {
                     if case .noSuchTable = error {
                         return []
@@ -174,7 +262,13 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
             guard
                 let model = model,
                 let context = model.context
-            else { return setAndNotify(newValue) }
+            else {
+                print("many: model: \(String(describing: model)), context: \(String(describing: model?.context))")
+                fatalError("""
+                Relationships require a context for setting. \
+                Insert the model before adding relationships.
+                """)
+            }
             
             let predicateMatches = context._prepareForChange(of: model)
             setAndNotify(newValue)
@@ -183,15 +277,6 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
             wasTouched = true
         }
     }
-    
-    /* TODO: add async fetch
-     public func readAsynchronously() async throws -> T? {
-     guard let context = model?.context else {
-     return store
-     }
-     return try await context.fetchSingleProperty(field: self)
-     }
-     */
     
     public init(
         inverse: String? = nil,
@@ -205,17 +290,80 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
     }
     
     private func setAndNotify(_ newValue: Value) {
+        let oldValue = wrappedValue
+        
+        let oldIDs = Set(oldValue.map(\.id))
+        let newIDs = Set(newValue.map(\.id))
+        
+        let removed = oldValue.filter { !newIDs.contains($0.id) }
+        let added = newValue.filter { !oldIDs.contains($0.id) }
+        
         lock.withLock {
-            store = newValue
+            if (model?.context).isNil {
+                store = newValue
+            } else {
+                idStore = newValue.map(\.id)
+            }
         }
+        
+        updateOtherSide(removed: removed, added: added)
         model?.notifyOfChanges()
+    }
+    
+    private func updateOtherSide(removed: [T], added: [T]) {
+        guard let model, let context = model.context, let inverseKey else { return }
+        
+        for target in removed {
+            let matchingField = target._fields.first { $0.key == inverseKey }
+            defer { matchingField?.model?.notifyOfChanges() }
+            
+            if var manyField = matchingField as? ManyRelationship {
+                manyField.persistableValue.removeAll { $0 == model.id }
+            } else if var oneField = matchingField as? OneRelationship {
+                if oneField.persistableValue == model.id {
+                    oneField.persistableValue = nil
+                }
+            }
+        }
+        
+        for target in added {
+            let matchingField = target._fields.first { $0.key == inverseKey }
+            defer { matchingField?.model?.notifyOfChanges() }
+            
+            do {
+                if target.context.isNil {
+                    try context.insert(target)
+                } else if target.context?.identifier != context.identifier {
+                    fatalError("""
+                Tried set model from different context as relationship. \
+                Schema: \(model._getSchema())
+                """)
+                }
+            } catch {
+                fatalError(error.localizedDescription)
+            }
+            
+            if var manyField = matchingField as? ManyRelationship {
+                if !manyField.persistableValue.contains(model.id) {
+                    manyField.persistableValue.append(model.id)
+                }
+            } else if var oneField = matchingField as? OneRelationship {
+                oneField.persistableValue = model.id
+            }
+        }
     }
     
     public func setStoreToCapturedState(_ state: Any) {
         lock.withLock {
             guard let value = state as? Value else {
-                //fatalError(ManagedObjectContextError.capturedStateApplicationFailed(WrappedType.self, instanceKey).localizedDescription)
-                return
+                fatalError(
+                    ManagedObjectContextError
+                        .capturedStateApplicationFailed(
+                            [ULID].self,
+                            instanceKey
+                        )
+                        .localizedDescription
+                )
             }
             self.store = value
             self.idStore = value.map(\.id)
@@ -226,6 +374,28 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
     public var persistableValue: PersistableRepresentation {
         get { idStore }
         set { idStore = newValue }
+    }
+    
+    // Connect model instance to wrapper.
+    public static subscript<OuterSelf: PersistentModel>(
+        _enclosingInstance observed: OuterSelf,
+        wrapped wrappedKeyPath: ReferenceWritableKeyPath<OuterSelf, [T]>,
+        storage storageKeyPath: ReferenceWritableKeyPath<OuterSelf, _ManyRelationship<T>>
+    ) -> [T] {
+        get {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            return storage.wrappedValue
+        }
+        set {
+            let storage = observed[keyPath: storageKeyPath]
+            if storage.model == nil {
+                storage.model = observed
+            }
+            storage.wrappedValue = newValue
+        }
     }
 }
 

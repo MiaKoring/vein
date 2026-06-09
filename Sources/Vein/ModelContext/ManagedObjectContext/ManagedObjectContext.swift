@@ -134,4 +134,6 @@ public actor ManagedObjectContext {
     }
 }
 
-
+extension ManagedObjectContext {
+    nonisolated public var identifier: ObjectIdentifier { ObjectIdentifier(self) }
+}

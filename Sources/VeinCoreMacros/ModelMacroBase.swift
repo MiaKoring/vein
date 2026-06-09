@@ -38,7 +38,7 @@ public struct ModelMacroBase {
         fieldAccessorBodies.append("self._id")
         
         for name in allFieldNames {
-            fieldBodys.append("self._\(name).model = self")
+            //fieldBodys.append("self._\(name).model = self")
             fieldBodys.append("self._\(name).key = \"\(name)\"")
             fieldAccessorBodies.append("self._\(name)")
         }
@@ -220,13 +220,17 @@ static let _fieldInformation: [Vein.FieldInformation] = [
         var transformedArguments: [String] = []
         
         if let argumentList = arguments,
-           let inverseArg = argumentList.first(where: { $0.label?.text == "inverse" }),
-           let inversePropertyName = inverseArg.expression.extractKeyPathPropertyName()
-        { transformedArguments .append("inverse: \"\(inversePropertyName)\"") }
+           let inverseArg = argumentList.first(where: { $0.label?.text == "inverse" })/*,
+           let inversePropertyName = inverseArg.expression.extractKeyPathPropertyName()*/
+        {
+            // uncomment once keypath is used again with runtime link inference
+            // transformedArguments.append("inverse: \"\(inversePropertyName)\"")
+            transformedArguments.append(inverseArg.description.trimmingCharacters(in: [",", " "]))
+        }
         
         if let argumentList = arguments,
            let deleteruleArg = argumentList.first(where: { $0.label?.text == "deleteRule" })
-        { transformedArguments .append(deleteruleArg.description) }
+        { transformedArguments.append(deleteruleArg.description) }
         
         // Determine if target type is a collection
         let isMany = isCollection(type: varDecl.bindings.first?.typeAnnotation?.type)
