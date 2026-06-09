@@ -10,7 +10,7 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
     private let lock = NSLock()
     private var store: Value
     private var idStore: ULID?
-    public var inverse: AnyKeyPath?
+    public var inverseKey: String?
     public var deleteRule: DeleteRule
     
     /// ONLY LET MACRO SET
@@ -41,7 +41,7 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
                 guard let id = idStore else { return nil }
                 do {
                     let result = try context.getModel(id: id, type: T.self)
-                    if inverse.isNil {
+                    if inverseKey.isNil {
                         store = result
                     }
                     return result
@@ -80,13 +80,13 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
      */
     
     public init(
-        inverse: AnyKeyPath? = nil,
+        inverse: String? = nil,
         deleteRule: DeleteRule = .nullify
     ) {
         self.key = nil
         self.store = nil
         self.idStore = nil
-        self.inverse = inverse
+        self.inverseKey = inverse
         self.deleteRule = deleteRule
     }
     
@@ -124,7 +124,7 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
     private let lock = NSLock()
     private var store: Value
     private var idStore: [ULID]
-    public var inverse: AnyKeyPath?
+    public var inverseKey: String?
     public var deleteRule: DeleteRule
     
     /// ONLY LET MACRO SET
@@ -194,13 +194,13 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
      */
     
     public init(
-        inverse: AnyKeyPath? = nil,
+        inverse: String? = nil,
         deleteRule: DeleteRule = .nullify
     ) {
         self.key = nil
         self.store = []
         self.idStore = []
-        self.inverse = inverse
+        self.inverseKey = inverse
         self.deleteRule = deleteRule
     }
     

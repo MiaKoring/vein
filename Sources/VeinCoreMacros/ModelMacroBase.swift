@@ -215,14 +215,27 @@ static let _fieldInformation: [Vein.FieldInformation] = [
         }
         
         // Extract the user-defined arguments (inverse, deleteRule, etc.)
-        let arguments = relationshipAttr.arguments
+        let arguments = relationshipAttr.arguments?.as(LabeledExprListSyntax.self)
+        
+        var transformedArguments: [String] = []
+        
+        if let argumentList = arguments,
+           let inverseArg = argumentList.first(where: { $0.label?.text == "inverse" }),
+           let inversePropertyName = inverseArg.expression.extractKeyPathPropertyName()
+        { transformedArguments .append("inverse: \"\(inversePropertyName)\"") }
+        
+        if let argumentList = arguments,
+           let deleteruleArg = argumentList.first(where: { $0.label?.text == "deleteRule" })
+        { transformedArguments .append(deleteruleArg.description) }
         
         // Determine if target type is a collection
         let isMany = isCollection(type: varDecl.bindings.first?.typeAnnotation?.type)
         let wrapperName = isMany ? "_ManyRelationship" : "_OneRelationship"
         
+        let argumentString = transformedArguments.joined(separator: ", ")
+        
         // Generate the matching property wrapper with passed-through arguments
-        let attribute: AttributeSyntax = "@\(raw: wrapperName)(\(raw: arguments?.description ?? ""))"
+        let attribute: AttributeSyntax = "@\(raw: wrapperName)(\(raw: argumentString))"
         return [attribute]
     }
 }
@@ -383,5 +396,22 @@ extension String {
     var isCollection: Bool {
         let modified = self.drop(while: { $0 == " " || $0 == ":" })
         return modified.hasPrefix("[") || modified.hasPrefix("Array<")
+    }
+}
+
+extension ExprSyntax {
+    func extractKeyPathPropertyName() -> String? {
+        // Check if the expression is a KeyPath
+        guard let keyPath = self.as(KeyPathExprSyntax.self) else {
+            return nil
+        }
+        
+        // Get the last component (the property name)
+        guard let lastComponent = keyPath.components.last,
+              let propertyComponent = lastComponent.component.as(KeyPathPropertyComponentSyntax.self) else {
+            return nil
+        }
+        
+        return propertyComponent.declName.baseName.text
     }
 }

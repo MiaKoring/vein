@@ -112,7 +112,7 @@ fileprivate enum V0_0_1: VersionedSchema {
     
     @Model
     final class Comment: Identifiable {
-        @Relationship(inverse: \User.comments)
+        @Relationship(inverse: \User.comments, deleteRule: .cascade)
         var author: User?
         
         @Field
