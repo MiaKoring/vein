@@ -29,7 +29,7 @@ public struct ModelMacroBase {
         let eagerFields = fieldVariables.fields()
         
         // MARK: - Setup Fields & _fields accessor
-        var allFieldNames = Array(eagerFields.keys)
+        var allFieldNames = Array(eagerFields.keys) + Array(relationshipFields.keys)
         allFieldNames.append(contentsOf: lazyFields.keys)
         
         var fieldBodys = [String]()
@@ -42,10 +42,14 @@ public struct ModelMacroBase {
             fieldBodys.append("self._\(name).key = \"\(name)\"")
             fieldAccessorBodies.append("self._\(name)")
         }
-        fieldBodys.append("self._id.model = self")
         
-        let fieldSetup = fieldBodys.joined(separator: "\n    ")
-        let fieldAccessorSetup = fieldAccessorBodies.joined(separator: ",\n        ")
+        /*// MARK: - Setup Relationships & _relationship accessor
+        var relationshipAccessorBodies = [String]()
+        for name in relationshipFields.keys {
+            fieldBodys.append("self._\(name).model = self")
+            fieldBodys.append("self._\(name).key = \"\(name)\"")
+            relationshipAccessorBodies.append("self._\(name)")
+        }*/
         
         // MARK: - Field information
         var fieldInformation = lazyFields.map { key, value in
@@ -56,11 +60,21 @@ public struct ModelMacroBase {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
             return "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true)"
         })
+        fieldInformation.append(contentsOf: relationshipFields.map { key, value in
+            // currently only ULID or ULID array is supported
+            let value = value.isCollection ? "[ULID]": "ULID?"
+            return "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true)"
+        })
         
         let fieldInformationString = fieldInformation.joined(separator: ",\n    ")
         
         // MARK: - inits and assembly
         let eagerVarInit = eagerFields.initEagerRows()
+        let relationshipInit = relationshipFields.initRelationshipRows()
+        
+        fieldBodys.append("self._id.model = self")
+        let fieldSetup = fieldBodys.joined(separator: "\n    ")
+        let fieldAccessorSetup = fieldAccessorBodies.joined(separator: ",\n        ")
         
         let body =
 """
@@ -72,6 +86,7 @@ var id: ULID
 required init(id: ULID, fields: [String: Vein.SQLiteValue]) {
     self.id = id
     \(eagerVarInit)
+    \(relationshipInit)
     _setupFields()
 }
 
@@ -82,13 +97,12 @@ public func _setupFields() {
 }
 
 var context: Vein.ManagedObjectContext? = nil
-var _fields: [any Vein.PersistedField] {
+
+var _fields: [any Vein.FieldBase] {
     [
         \(fieldAccessorSetup)
     ]
 }
-
-var _relationships: [any PersistedRelationship] {[]}
 
 static let _fieldInformation: [Vein.FieldInformation] = [
     \(fieldInformationString)
@@ -282,6 +296,19 @@ extension Dictionary where Key == String, Value == String {
                 """
         }.joined(separator: "\n    ")
     }
+    
+    func initRelationshipRows() -> String {
+        self.map { key, value in
+            let idType = value.isCollection ? "[ULID]": "ULID?"
+            return """
+                self._\(key).persistableValue = try! \(idType).init(
+                        fromPersistent: \(idType).PersistentRepresentation.decode(
+                            sqliteValue: fields[\"\(key)\"]!
+                        )
+                    )!
+                """
+        }.joined(separator: "\n    ")
+    }
 }
 
 extension VariableDeclSyntax {
@@ -347,10 +374,14 @@ extension ModelMacroBase {
         guard let type = type else { return false }
         
         let typeStr = type.trimmedDescription
-        
-        // Match syntactic sugar like [Type] or explicit collection types
-        return typeStr.hasPrefix("[") ||
-        typeStr.hasPrefix("Set<") ||
-        typeStr.hasPrefix("Array<")
+
+        return typeStr.isCollection
+    }
+}
+
+extension String {
+    var isCollection: Bool {
+        let modified = self.drop(while: { $0 == " " || $0 == ":" })
+        return modified.hasPrefix("[") || modified.hasPrefix("Array<")
     }
 }

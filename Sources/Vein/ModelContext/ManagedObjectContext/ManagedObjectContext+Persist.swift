@@ -6,7 +6,7 @@ extension ManagedObjectContext {
         do {
             let table = Table(model._getSchema())
             try connection.run(table.insert(model._fields.map {
-                return $0.wrappedValue.asPersistentRepresentation.sqliteValue.setter(withKey: $0.instanceKey, andTypeName: $0.wrappedValue.asPersistentRepresentation.sqliteTypeName)
+                return $0.persistableValue.asPersistentRepresentation.sqliteValue.setter(withKey: $0.instanceKey, andTypeName: $0.persistableValue.asPersistentRepresentation.sqliteTypeName)
             }))
         } catch let error as ManagedObjectContextError { throw error }
         catch let error as SQLiteDB.Result {
@@ -36,12 +36,12 @@ extension ManagedObjectContext {
                     model._fields
                         .filter { $0.wasTouched }
                         .map {
-                            $0.wrappedValue
+                            $0.persistableValue
                                 .asPersistentRepresentation
                                 .sqliteValue
                                 .setter(
                                     withKey: $0.instanceKey,
-                                    andTypeName: $0.wrappedValue
+                                    andTypeName: $0.persistableValue
                                         .asPersistentRepresentation
                                         .sqliteTypeName
                                 )

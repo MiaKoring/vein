@@ -52,6 +52,11 @@ public struct PrimaryKey: PersistedField, @unchecked Sendable {
     
     /// No-op: Primary key is immutable after insertion and doesn't participate in rollback.
     public func setStoreToCapturedState(_ state: Any) {}
+    
+    public var persistableValue: ULID {
+        get { self.wrappedValue }
+        set { self.wrappedValue = newValue }
+    }
 }
 
 

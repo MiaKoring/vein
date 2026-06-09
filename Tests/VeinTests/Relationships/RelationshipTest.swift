@@ -1,12 +1,19 @@
 import Foundation
 import Testing
+import Logging
 @testable import Vein
 @testable import VeinCore
 
 @MainActor
 @Suite struct RelationshipTest {
+    static let logger = Logger(label: "de.amethystsoft.vein.test.migration")
+    
     @Test func testPersist() async throws {
         let dbPath = try prepareContainerLocation(name: "RelationshipMigration")
+        
+        Self.logger.info(
+            "Relationship migration test started with db location: \(dbPath)"
+        )
         
         let container = try ModelContainer(
             V0_0_1.self,
@@ -22,6 +29,10 @@ import Testing
         
         try container.context.insert(user)
         try container.context.save()
+        
+        let oldUsers = try container.context.fetchAll(V0_0_1.User.self)
+        
+        #expect(oldUsers.count == 1 && oldUsers.first?.id == user.id)
         
         let storedSchemas = try container.context.getAllStoredSchemas()
         
@@ -163,13 +174,33 @@ fileprivate enum Migration: SchemaMigrationPlan {
         fromVersion: V0_0_1.self,
         toVersion: V0_0_2.self,
         willMigrate: { context in
-            let users = try context.fetchAll(V0_0_1.User._PredicateHelper()._builder())
+            // 1. Fetch all old models independently to avoid dynamic graph changes
+            let oldUsers = try context.fetchAll(V0_0_1.User.self)
+            let oldComments = try context.fetchAll(V0_0_1.Comment.self)
             
-            for user in users {
-                let new = V0_0_2.User(name: user.name)
-                new.comments = user.comments.map { V0_0_2.Comment(text: $0.text) }
-                try context.insert(new)
-                try context.delete(user)
+            // 2. Map old comments to new comments
+            var newCommentsMap: [ULID: V0_0_2.Comment] = [:]
+            for oldComment in oldComments {
+                let newComment = V0_0_2.Comment(text: oldComment.text)
+                newComment.id = oldComment.id
+                newCommentsMap[oldComment.id] = newComment
+            }
+            
+            // 3. Map users and link their comments
+            for oldUser in oldUsers {
+                let newUser = V0_0_2.User(name: oldUser.name)
+                newUser.comments = oldUser.comments.compactMap { oldComment in
+                    newCommentsMap[oldComment.id]
+                }
+                try context.insert(newUser)
+            }
+            
+            // 4. Safely delete all old records
+            for oldComment in oldComments {
+                try context.delete(oldComment)
+            }
+            for oldUser in oldUsers {
+                try context.delete(oldUser)
             }
         },
         didMigrate: nil

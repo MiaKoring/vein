@@ -104,6 +104,11 @@ public final class LazyField<T: Persistable>: PersistedField, @unchecked Sendabl
             self._wasTouched = false
         }
     }
+    
+    public var persistableValue: T? {
+        get { wrappedValue }
+        set { wrappedValue = newValue }
+    }
 }
 
 @propertyWrapper
@@ -174,5 +179,10 @@ public final class Field<T: Persistable>: PersistedField, @unchecked Sendable {
             self.store = value
             self._wasTouched = false
         }
+    }
+    
+    public var persistableValue: T {
+        get { wrappedValue }
+        set { wrappedValue = newValue }
     }
 }

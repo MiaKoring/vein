@@ -3,8 +3,9 @@ import Vein
 
 @propertyWrapper
 public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, @unchecked Sendable {
+    public let isLazy: Bool = false
     public typealias Value = T?
-    public typealias PersistableRepresentation = ULID?
+    public typealias WrappedType = ULID?
     
     private let lock = NSLock()
     private var store: Value
@@ -108,7 +109,7 @@ public final class _OneRelationship<T: PersistentModel>: PersistedRelationship, 
         }
     }
     
-    public var persistentRepresentation: PersistableRepresentation {
+    public var persistableValue: WrappedType {
         get { idStore }
         set { idStore = newValue }
     }
@@ -119,6 +120,7 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
     public typealias Value = [T]
     public typealias PersistableRepresentation = [ULID]
     
+    public let isLazy: Bool = false
     private let lock = NSLock()
     private var store: Value
     private var idStore: [ULID]
@@ -221,7 +223,7 @@ public final class _ManyRelationship<T: PersistentModel>: PersistedRelationship,
         }
     }
     
-    public var persistentRepresentation: PersistableRepresentation {
+    public var persistableValue: PersistableRepresentation {
         get { idStore }
         set { idStore = newValue }
     }

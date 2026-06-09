@@ -11,8 +11,7 @@ public protocol PersistentModel: AnyObject, Sendable {
     var id: ULID { get set }
     var context: ManagedObjectContext? { get set }
     
-    var _fields: [any PersistedField] { get }
-    var _relationships: [any PersistedRelationship] { get }
+    var _fields: [any FieldBase] { get }
     static var _fieldInformation: [FieldInformation] { get }
     
     func _setupFields() -> Void
@@ -34,7 +33,7 @@ extension PersistentModel {
         var data = [String: Any]()
         
         for field in _fields {
-            data[field.instanceKey] = field.wrappedValue
+            data[field.instanceKey] = field.persistableValue
         }
         
         return PrimitiveState(values: data)
