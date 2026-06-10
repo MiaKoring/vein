@@ -8,10 +8,19 @@ public protocol PersistentModel: AnyObject, Sendable {
     var notifyOfChanges: () -> Void { get }
     
     static var schema: String { get }
+    /// The primary ID of the object.
+    /// Gets  used to reference models in relationships.
+    /// Immutable after insertion into the context.
     var id: ULID { get set }
     var context: ManagedObjectContext? { get set }
     
-    var _fields: [any PersistedField] { get }
+    /// Whether a model is prepared to be deleted.
+    ///
+    /// Reading this variable is safe, but it should never be set outside of Vein.
+    var _isPreparedForDeletion: Bool { get set }
+    
+    var _fields: [any FieldBase] { get }
+    var _relationships: [any PersistedRelationship] { get }
     static var _fieldInformation: [FieldInformation] { get }
     
     func _setupFields() -> Void
@@ -27,13 +36,13 @@ public protocol PersistentModel: AnyObject, Sendable {
 extension PersistentModel {
     public static var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
     public var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
-    func _getSchema() -> String { Self.schema }
+    public func _getSchema() -> String { Self.schema }
     
     public func extractPrimitiveState() -> PrimitiveState {
         var data = [String: Any]()
         
         for field in _fields {
-            data[field.instanceKey] = field.wrappedValue
+            data[field.instanceKey] = field.persistableValue
         }
         
         return PrimitiveState(values: data)

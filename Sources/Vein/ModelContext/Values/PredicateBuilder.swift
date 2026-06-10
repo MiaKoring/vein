@@ -1,8 +1,11 @@
 @preconcurrency import SQLiteDB
+import ULID
 
 public protocol PredicateConstructor: Sendable {
     associatedtype Model: PersistentModel
     func _builder() -> PredicateBuilder<Model>
+    func id(_ op: Vein.ComparisonOperator, _ value: ULID) -> Self
+    static func id(_ op: Vein.ComparisonOperator, _ value: ULID) -> Self
     
     init()
 }
@@ -55,7 +58,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
                     .first(
                         where: { $0.instanceKey == key }
                     )!
-                    .wrappedValue as! V
+                    .persistableValue as! V
             )
             .fieldIsEqualTo(
                 sqliteValue
@@ -91,7 +94,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
                     .first(
                         where: { $0.instanceKey == key }
                     )!
-                    .wrappedValue as! V
+                    .persistableValue as! V
             )
             .fieldIsNotEqualTo(
                 sqliteValue
@@ -128,7 +131,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
                     .first(
                         where: { $0.instanceKey == key }
                     )!
-                    .wrappedValue as! V
+                    .persistableValue as! V
             )
             .fieldIsBiggerThan(
                 sqliteValue
@@ -165,7 +168,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
                     .first(
                         where: { $0.instanceKey == key }
                     )!
-                    .wrappedValue as! V
+                    .persistableValue as! V
             )
             .fieldIsSmallerThan(
                 sqliteValue
@@ -202,7 +205,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
                     .first(
                         where: { $0.instanceKey == key }
                     )!
-                    .wrappedValue as! V
+                    .persistableValue as! V
             )
             .fieldIsSmallerOrEqual(
                 sqliteValue
@@ -239,7 +242,7 @@ public struct PredicateBuilder<T: PersistentModel>: Sendable, Hashable, AnyPredi
                     .first(
                         where: { $0.instanceKey == key }
                     )!
-                    .wrappedValue as! V
+                    .persistableValue as! V
             )
             .fieldIsBiggerOrEqual(
                 sqliteValue
