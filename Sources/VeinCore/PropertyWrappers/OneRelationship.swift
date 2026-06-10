@@ -222,7 +222,7 @@ public final class _OneRelationship<T: PersistentModel>: OneRelationship, @unche
                 do {
                     try context.delete(target)
                 } catch {
-                    Self.logger.error("An error occured while cascading deletion: \(error)")
+                    Self.logger.error("An error occurred while cascading deletion: \(error)")
                 }
         }
     }

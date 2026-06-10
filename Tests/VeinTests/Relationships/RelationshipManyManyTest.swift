@@ -35,7 +35,7 @@ extension RelationshipTest {
         #expect(tagSwift.posts.isEmpty)
         #expect(tagPerformance.posts.contains(where: { $0.id == post.id }))
         
-        try verifySaveWithNewContainer()
+        try verifyRemovalWithNewContainer()
         
         func verifySaveWithNewContainer() throws {
             // Verify disk written changes

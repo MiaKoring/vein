@@ -416,17 +416,9 @@ extension Optional: Persistable, ColumnType where Wrapped: Persistable {
 extension Array: Persistable where Element == ULID {
     public init?(fromPersistent representation: String) {
         let parts = representation.split(separator: ",")
-        let ulids = parts.compactMap { ULID(ulidString: String($0)) }
-        
-        guard ulids.count == parts.count else {
-            Self.logger.error(
-                """
-                One or more ULIDs failed to initialize in from Persistable \
-                [ULID] initializer, potential data corruption
-                """
-            )
-            return nil
-        }
+        // If any of these fail, the data is corrupted.
+        // Corrupted data should always crash to hopefully simplify recovery.
+        let ulids = parts.compactMap { ULID(ulidString: String($0))! }
         self = ulids
     }
     
