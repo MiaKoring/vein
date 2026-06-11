@@ -268,7 +268,7 @@ static let _fieldInformation: [Vein.FieldInformation] = [
                 .trimmingCharacters(in: ["?"])
         {
             guard
-                typeDecl == root || typeDecl == "[\(root)]"
+                typeDecl == root || typeDecl == "[\(root)]" || typeDecl == "Array<\(root)>"
             else {
                 throw MacroError.relationshipKeypathDoesNotMatchTypeDeclaration("""
                 \(root) is not compatible with \(typeDecl)
