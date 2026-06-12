@@ -59,7 +59,14 @@ public final class ModelContainer: @unchecked Sendable {
         }
         
         self.migration = migration
-        self.path = path?.removingPercentEncoding
+        if let path {
+            guard let decodedPath = path.removingPercentEncoding else {
+                throw ManagedObjectContextError.other(
+                    message: "Invalid percent-encoded database path: \(path)"
+                )
+            }
+            self.path = decodedPath
+        } else { self.path = nil }
         self.versionedSchema = versionedSchema
         if let path = self.path {
             if !FileManager.default.fileExists(atPath: path) {

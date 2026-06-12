@@ -45,13 +45,15 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
     func initialize(with context: ManagedObjectContext) {
         guard results == nil && primaryObserver == nil else { return }
         
-        let primary = context.getOrCreateQueryObserver(
+        guard let primary = context.getOrCreateQueryObserver(
             for: M.typeIdentifier,
             predicate.hashValue,
             createWith: {
                 return self
             }
-        ) as! Self
+        ) as? Self else {
+            fatalError("Type mismatch: expected QueryObserver<\(M.self)>, got incompatible observer")
+        }
         
         if primary !== self {
             self.primaryObserver = primary
@@ -179,7 +181,7 @@ public struct VeinContainer<Content: View>: View {
                 Text(error.localizedDescription).foregroundStyle(.red)
             } else {
                 ProgressView()
-                    .onAppear {
+                    .task {
                         do {
                             try container.migrate()
                             isInitialized = true
