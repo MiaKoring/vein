@@ -12,7 +12,6 @@ extension PredicateConversionTests {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.id == ulid
         }
-        print(predicate.expression)
         
         let expression = try predicate.toSQLiteFilter()
         

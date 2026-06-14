@@ -56,29 +56,43 @@ public struct ModelMacroBase {
         }.joined(separator: ",\n        ")
         
         // MARK: - Field information
-        var fieldInformation = lazyFields.map { key, value in
+        var predicateInformation: [String] = []
+        var fieldInformation: [String] = []
+        for (key, value) in lazyFields {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
-            return "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", false)"
+            let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", false)"
+            fieldInformation.append(information)
+            predicateInformation.append("case \\.\(key): \(information)")
         }
-        fieldInformation.append(contentsOf: eagerFields.map { key, value in
+        for (key, value) in eagerFields {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
-            return "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true)"
-        })
-        fieldInformation.append(contentsOf: relationshipFields.map { key, value in
+            let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true)"
+            fieldInformation.append(information)
+            predicateInformation.append("case \\.\(key): \(information)")
+        }
+        for (key, value) in relationshipFields {
             let relationshipType = "\(value.coreRelationshipType).self"
             // currently only ULID or ULID array is supported
             let value = value.isCollection ? "[ULID]": "ULID?"
-            return """
-            Vein.FieldInformation(
-                    \(value).sqliteTypeName,
-                    \"\(key)\",
-                    true,
-                    \(relationshipType)
-                )
-            """
-        })
+            let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true, \(relationshipType))"
+            
+            fieldInformation.append(information)
+            predicateInformation.append("case \\.\(key): \(information)")
+        }
         
         let fieldInformationString = fieldInformation.joined(separator: ",\n    ")
+        var predicateInformationString: String
+        
+        predicateInformation.append("case \\.id: Vein.FieldInformation(ULID.sqliteTypeName, \"id\", true)")
+        
+        if !predicateInformation.isEmpty {
+            predicateInformationString = "switch keyPath {\n        "
+            predicateInformationString.append(contentsOf: predicateInformation.joined(separator: "\n        "))
+            predicateInformationString.append("\n        default: nil")
+            predicateInformationString.append("\n    }")
+        } else {
+            predicateInformationString = "nil"
+        }
         
         // MARK: - inverse field data
         let inverseFieldData: String = relationshipVariables.compactMap {
@@ -154,6 +168,10 @@ static let _inverseFields = {
     
     return map
 }()
+
+static func _predicateInformation(for keyPath: PartialKeyPath<\(className)>) -> FieldInformation? {
+    \(predicateInformationString)
+}
 
 static let _fieldInformation: [Vein.FieldInformation] = [
     \(fieldInformationString)

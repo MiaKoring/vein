@@ -10,7 +10,7 @@ extension PredicateConversionTests {
     func relationshipPredicate() async throws {
         let ulid = ULID()
         let predicate = #Predicate<V0_0_1.Comment> { comment in
-            comment.author?.name == "Mia"
+            comment.text == "Test"
         }
         print(predicate.expression)
         
