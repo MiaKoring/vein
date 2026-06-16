@@ -252,7 +252,7 @@ extension PredicateExpressions.SequenceStartsWith: SQLiteExpressibleBuilder wher
     
     public func asSQLiteExpression() throws(PredicateConversionError) -> SQLExpression<Bool> {
         guard let base = try self.base.asSQLiteExpression() as? SQLExpression<String>
-        else { throw.unsupportedStartsWithType(.base) }
+        else { throw .unsupportedStartsWithType(.base) }
         guard let other = try self.prefix.asSQLiteExpression() as? SQLExpression<String>
         else { throw .unsupportedStartsWithType(.parameter) }
         
@@ -260,6 +260,7 @@ extension PredicateExpressions.SequenceStartsWith: SQLiteExpressibleBuilder wher
     }
 }
 
+#if os(macOS) || os(iOS) || os(tvOS) || os(watchOS) || os(visionOS)
 extension PredicateExpressions.StringLocalizedStandardContains: SQLiteExpressibleBuilder where
     Root: SQLiteExpressibleBuilder,
     Other: SQLiteExpressibleBuilder,
@@ -270,7 +271,7 @@ extension PredicateExpressions.StringLocalizedStandardContains: SQLiteExpressibl
     
     public func asSQLiteExpression() throws(PredicateConversionError) -> SQLExpression<Bool> {
         guard let base = try self.root.asSQLiteExpression() as? SQLExpression<String>
-        else { throw.unsupportedContainsType(.base) }
+        else { throw .unsupportedContainsType(.base) }
         guard let other = try self.other.asSQLiteExpression() as? SQLExpression<String>
         else { throw .unsupportedContainsType(.parameter) }
         
@@ -287,6 +288,7 @@ extension PredicateExpressions.StringLocalizedStandardContains: SQLiteExpressibl
         return SQLExpression<Bool>("instr(\(lowerBase), \(lowerOther)) > 0", lowerBindings)
     }
 }
+#endif
 
 extension PredicateExpressions.CollectionContainsCollection: SQLiteExpressibleBuilder where
     Base: SQLiteExpressibleBuilder,
@@ -298,7 +300,7 @@ extension PredicateExpressions.CollectionContainsCollection: SQLiteExpressibleBu
     
     public func asSQLiteExpression() throws(PredicateConversionError) -> SQLExpression<Bool> {
         guard let base = try self.base.asSQLiteExpression() as? SQLExpression<String>
-        else { throw.unsupportedContainsType(.base) }
+        else { throw .unsupportedContainsType(.base) }
         guard let other = try self.other.asSQLiteExpression() as? SQLExpression<String>
         else { throw .unsupportedContainsType(.parameter) }
         

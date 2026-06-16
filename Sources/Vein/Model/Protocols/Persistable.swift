@@ -39,7 +39,12 @@ extension ColumnType {
     }
     
     public var sqlExpression: SQLExpression<SQLiteType> {
-        SQLExpression<SQLiteType>("?", [sqliteValue.bindingValue])
+        switch sqliteValue {
+            case .null:
+                SQLExpression<SQLiteType>(literal: "NULL")
+            default:
+                SQLExpression<SQLiteType>("?", [sqliteValue.bindingValue])
+        }
     }
 }
 

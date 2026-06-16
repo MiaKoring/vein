@@ -167,7 +167,7 @@ static let _inverseFields = {
     return map
 }()
 
-static func _predicateInformation(for keyPath: PartialKeyPath<\(className)>) -> FieldInformation? {
+static func _predicateInformation(for keyPath: PartialKeyPath<\(className)>) -> Vein.FieldInformation? {
     \(predicateInformationString)
 }
 
