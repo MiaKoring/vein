@@ -1,12 +1,6 @@
 import Foundation
 import SQLiteDB
 
-fileprivate struct Test {
-    var mio: String
-    var mia: String
-    var randomNumber: Int
-}
-
 public enum PredicateConversionError: Error {
     case incompatiblePredicate
     case unexpectedComparisonOperator(PredicateExpressions.ComparisonOperator)

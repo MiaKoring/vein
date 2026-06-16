@@ -21,8 +21,17 @@ public struct Query<M: PersistentModel>: DynamicProperty {
         return (queryObserver.primaryObserver?.results ?? queryObserver.results ?? []).sorted(by: { $0.id < $1.id })
     }
     
-    public init(_ predicate: Predicate<M>) {
+    public init(_ predicate: ModelPredicate<M>) {
         self._queryObserver = StateObject(wrappedValue: QueryObserver<M>(predicate))
+    }
+    
+    public init(_ predicate: Predicate<M>) {
+        do {
+            let modelPredicate = try ModelPredicate(predicate)
+            self._queryObserver = StateObject(wrappedValue: QueryObserver(modelPredicate))
+        } catch {
+            fatalError("Creating ModelPredicate from predicate '\(predicate.expression)' failed with: \(error.localizedDescription)")
+        }
     }
 }
 
@@ -98,12 +107,8 @@ package final class QueryObserver<M: PersistentModel>: ObservableObject, @unchec
         append(typedModels)
     }
     
-    package init(_ predicate: Predicate<M>) {
-        do {
-            self.predicate = try ModelPredicate(predicate)
-        } catch {
-            fatalError("Creating ModelPredicate from predicate '\(predicate.expression)' failed with: \(error.localizedDescription)")
-        }
+    package init(_ predicate: ModelPredicate<M>) {
+        self.predicate = predicate
     }
     
     @MainActor

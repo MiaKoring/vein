@@ -38,34 +38,6 @@ struct BugTests {
         let result2 = try newContainer.context.getModel(id: model2.id, type: V0_0_1.User.self)
         #expect(result2?.name == model2.name)
     }
-    
-    func prepareContainerLocation(name: String) throws -> String {
-#if os(Linux)
-        Keyring.appIdentifier.withLock { identifier in
-            identifier = "de.amethystsoft.vein.tests"
-        }
-#endif
-        
-        let containerPath = FileManager.default.temporaryDirectory
-        
-        let dbDir = containerPath.relativePath.appending("/veinTests/\(testID.uuidString)")
-        
-        let dbPath = dbDir.appending("/\(name).sqlite3")
-        
-        try FileManager.default.createDirectory(
-            atPath: dbDir,
-            withIntermediateDirectories: true
-        )
-        
-        if !FileManager.default.fileExists(atPath: dbPath) {
-            FileManager.default.createFile(
-                atPath: dbPath,
-                contents: nil
-            )
-        }
-        
-        return dbPath
-    }
 }
 
 

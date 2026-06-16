@@ -225,7 +225,7 @@ struct PredicateConversionTests {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.balance >= -10.5
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let query = Table("users").filter(expression).select(["*"])
         
@@ -374,7 +374,7 @@ struct PredicateConversionTests {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.somethingOptional == nil
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let filter = Table("users").filter(expression)
         let query = filter.select(["*"])
@@ -389,7 +389,7 @@ struct PredicateConversionTests {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.somethingOptional != nil
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let filter = Table("users").filter(expression)
         let query = filter.select(["*"])
@@ -404,7 +404,7 @@ struct PredicateConversionTests {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.name.starts(with: "Mia")
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let filter = Table("users").filter(expression)
         let query = filter.select(["*"])
@@ -428,7 +428,7 @@ struct PredicateConversionTests {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.email.starts(with: user.name)
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let filter = Table("users").filter(expression)
         let query = filter.select(["*"])
@@ -441,11 +441,11 @@ struct PredicateConversionTests {
     }
     
     @Test
-    func caseInsentiveFieldContainsString() async throws {
+    func caseInsensitiveFieldContainsString() async throws {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.name.localizedStandardContains("Mia")
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let filter = Table("users").filter(expression)
         let query = filter.select(["*"])
@@ -465,11 +465,11 @@ struct PredicateConversionTests {
     }
     
     @Test
-    func caseInsentiveFieldContainsField() async throws {
+    func caseInsensitiveFieldContainsField() async throws {
         let predicate = #Predicate<V0_0_1.User> { user in
             user.name.localizedStandardContains(user.email)
         }
-        print(predicate.expression)
+        
         let expression = try predicate.toSQLiteFilter()
         let filter = Table("users").filter(expression)
         let query = filter.select(["*"])

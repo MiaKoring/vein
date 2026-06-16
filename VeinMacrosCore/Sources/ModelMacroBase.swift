@@ -62,13 +62,13 @@ public struct ModelMacroBase {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
             let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", false)"
             fieldInformation.append(information)
-            predicateInformation.append("case \\\(className).\(key): return \(information)")
+            predicateInformation.append("case \\.\(key): \(information)")
         }
         for (key, value) in eagerFields {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
             let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true)"
             fieldInformation.append(information)
-            predicateInformation.append("case \\\(className).\(key): return \(information)")
+            predicateInformation.append("case \\.\(key): \(information)")
         }
         for (key, value) in relationshipFields {
             let relationshipType = "\(value.coreRelationshipType).self"
@@ -77,18 +77,18 @@ public struct ModelMacroBase {
             let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true, \(relationshipType))"
             
             fieldInformation.append(information)
-            predicateInformation.append("case \\.\(key): return \(information)")
+            predicateInformation.append("case \\.\(key): \(information)")
         }
         
         let fieldInformationString = fieldInformation.joined(separator: ",\n    ")
         var predicateInformationString: String
         
-        predicateInformation.append("case \\\(className).id: print(\"found\")\nreturn Vein.FieldInformation(ULID.sqliteTypeName, \"id\", true)")
+        predicateInformation.append("case \\.id: Vein.FieldInformation(ULID.sqliteTypeName, \"id\", true)")
         
         if !predicateInformation.isEmpty {
             predicateInformationString = "switch keyPath {\n        "
             predicateInformationString.append(contentsOf: predicateInformation.joined(separator: "\n        "))
-            predicateInformationString.append("\n        default: return nil")
+            predicateInformationString.append("\n        default: nil")
             predicateInformationString.append("\n    }")
         } else {
             predicateInformationString = "nil"
