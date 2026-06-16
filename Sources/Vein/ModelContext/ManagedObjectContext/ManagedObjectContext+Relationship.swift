@@ -57,7 +57,7 @@ extension ManagedObjectContext {
                 SQLExpression<Bool>(stringIDs.contains(SQLExpression<String>("id")))
             )
             let eagerLoadedFields = T._fieldInformation.eagerLoaded
-            var fieldsToLoad = eagerLoadedFields.map { $0.expressible }
+            var fieldsToLoad = eagerLoadedFields.map { $0.fetchExpressible }
             fieldsToLoad.append(SQLExpression<String>("id"))
             let select = table.select(distinct: fieldsToLoad)
             var models = [ULID: T]()

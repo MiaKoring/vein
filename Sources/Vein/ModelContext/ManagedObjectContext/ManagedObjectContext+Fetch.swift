@@ -8,9 +8,11 @@ extension ManagedObjectContext {
         do {
             let table = Table(T.schema).filter(predicate.sql)
             let eagerLoadedFields = T._fieldInformation.eagerLoaded
-            var fieldsToLoad = eagerLoadedFields.map { $0.expressible }
+            
+            var fieldsToLoad = eagerLoadedFields.map { $0.fetchExpressible }
             fieldsToLoad.append(SQLExpression<String>("id"))
-            let select = table.select(distinct: fieldsToLoad)
+            let select = table.select(fieldsToLoad)
+            
             var models = [T]()
             
             var currentlyDeleted = [ULID: any PersistentModel]()
@@ -90,7 +92,7 @@ extension ManagedObjectContext {
         guard let model = field.model else { throw MOCError.modelReference(message: "raised by field with property name '\(key)'")}
         
         let table = Table(model._getSchema()).filter(SQLExpression<String>("id") == model.id.ulidString)
-        let select = table.select(distinct: [field.expressible]).limit(1)
+        let select = table.select(distinct: [field.fetchExpressible]).limit(1)
         
         do {
             for row in try connection.prepare(select) {

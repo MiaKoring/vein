@@ -46,7 +46,13 @@ extension FieldBase {
         return model.id
     }
     
-    var expressible: Expressible {
+    /// This expressible should only be used for fetching.
+    ///
+    /// It converts a JSONB column back to a json string.
+    /// JSONB is proprietary, so we can't just use JSONDecoder with Data.
+    /// To use a JSONB column, use "json(\"\(key)\")" on the row.
+    /// SQLite.swift appears to do it that way.
+    var fetchExpressible: Expressible {
         return switch Self.sqliteTypeName.isNull {
             case true:
                 switch SQLiteTypeName.notNull(Self.sqliteTypeName){
@@ -54,6 +60,7 @@ extension FieldBase {
                     case .real: SQLExpression<Double?>(instanceKey)
                     case .text: SQLExpression<String?>(instanceKey)
                     case .blob: SQLExpression<Data?>(instanceKey)
+                    case .jsonb: SQLExpression<String?>(literal: "json(\"\(instanceKey)\")")
                     default: fatalError()
                 }
             case false:
@@ -62,6 +69,7 @@ extension FieldBase {
                     case .real: SQLExpression<Double>(instanceKey)
                     case .text: SQLExpression<String>(instanceKey)
                     case .blob: SQLExpression<Data>(instanceKey)
+                    case .jsonb: SQLExpression<String>(literal: "json(\"\(instanceKey)\")")
                     default: fatalError()
                 }
         }
@@ -84,6 +92,9 @@ extension FieldBase {
                 case .blob:
                     let value = row[SQLExpression<Data>(instanceKey)]
                     return try WrappedType.PersistentRepresentation.decode(sqliteValue: .blob(value))
+                case .jsonb:
+                    let value = row[SQLExpression<String>(literal: "json(\"\(instanceKey)\")")]
+                    return try WrappedType.PersistentRepresentation.decode(sqliteValue: .text(value))
                 case .null:
                     switch SQLiteTypeName.notNull(typeName) {
                         case .integer:
@@ -108,6 +119,12 @@ extension FieldBase {
                             let value = row[SQLExpression<Data?>(instanceKey)]
                             if let value {
                                 return try WrappedType.PersistentRepresentation.decode(sqliteValue: .blob(value))
+                            }
+                            return try WrappedType.PersistentRepresentation.decode(sqliteValue: .null)
+                        case .jsonb:
+                            let value = row[SQLExpression<String?>(literal: "json(\"\(instanceKey)\")")]
+                            if let value {
+                                return try WrappedType.PersistentRepresentation.decode(sqliteValue: .text(value))
                             }
                             return try WrappedType.PersistentRepresentation.decode(sqliteValue: .null)
                         default:
@@ -139,7 +156,7 @@ extension FieldBase {
                 builder.field(instanceKey, type: .double(required: required))
             case .text:
                 builder.field(instanceKey, type: .string(required: required))
-            case .blob:
+            case .blob, .jsonb:
                 builder.field(instanceKey, type: .data(required: required))
             case .null:
                 fatalError("Unexpectedly hit null SQLiteTypeName while building migration on Field \(key ?? instanceKey)")
