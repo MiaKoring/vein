@@ -9,18 +9,37 @@ fileprivate struct Test {
 
 public enum PredicateConversionError: Error {
     case incompatiblePredicate
-    case fieldUnsupportedAsContainsParameter
     case unexpectedComparisonOperator(PredicateExpressions.ComparisonOperator)
     case missingFieldInformation(String)
     case unexpectedUnsupportedRelationship(String)
     case unsupportedContainsType(ContainsPart)
     case unsupportedStartsWithType(ContainsPart)
-    case unsupportedFieldAsContainsParameter
     case notOperatorRequiresBoolExpression
     
     public enum ContainsPart: Sendable{
         case base
         case parameter
+    }
+}
+
+extension PredicateConversionError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+            case .incompatiblePredicate:
+                "Incompatible predicate"
+            case .unexpectedComparisonOperator(let comparisonOperator):
+                "Unexpected comparison operator: \(comparisonOperator)"
+            case .missingFieldInformation(let string):
+                "Missing field information: \(string)"
+            case .unexpectedUnsupportedRelationship(let string):
+                "Unexpected unsupported relationship: \(string)"
+            case .unsupportedContainsType(let containsPart):
+                "Unsupported contains type: \(containsPart)"
+            case .unsupportedStartsWithType(let containsPart):
+                "Unsupported starts with type: \(containsPart)"
+            case .notOperatorRequiresBoolExpression:
+                "not operator requires bool expression"
+        }
     }
 }
 

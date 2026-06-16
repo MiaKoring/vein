@@ -62,13 +62,13 @@ public struct ModelMacroBase {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
             let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", false)"
             fieldInformation.append(information)
-            predicateInformation.append("case \\.\(key): \(information)")
+            predicateInformation.append("case \\\(className).\(key): return \(information)")
         }
         for (key, value) in eagerFields {
             let value = value.drop(while: { $0 == " " || $0 == ":" })
             let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true)"
             fieldInformation.append(information)
-            predicateInformation.append("case \\.\(key): \(information)")
+            predicateInformation.append("case \\\(className).\(key): return \(information)")
         }
         for (key, value) in relationshipFields {
             let relationshipType = "\(value.coreRelationshipType).self"
@@ -77,18 +77,18 @@ public struct ModelMacroBase {
             let information = "Vein.FieldInformation(\(value).sqliteTypeName, \"\(key)\", true, \(relationshipType))"
             
             fieldInformation.append(information)
-            predicateInformation.append("case \\.\(key): \(information)")
+            predicateInformation.append("case \\.\(key): return \(information)")
         }
         
         let fieldInformationString = fieldInformation.joined(separator: ",\n    ")
         var predicateInformationString: String
         
-        predicateInformation.append("case \\.id: Vein.FieldInformation(ULID.sqliteTypeName, \"id\", true)")
+        predicateInformation.append("case \\\(className).id: print(\"found\")\nreturn Vein.FieldInformation(ULID.sqliteTypeName, \"id\", true)")
         
         if !predicateInformation.isEmpty {
             predicateInformationString = "switch keyPath {\n        "
             predicateInformationString.append(contentsOf: predicateInformation.joined(separator: "\n        "))
-            predicateInformationString.append("\n        default: nil")
+            predicateInformationString.append("\n        default: return nil")
             predicateInformationString.append("\n    }")
         } else {
             predicateInformationString = "nil"
@@ -120,8 +120,6 @@ public struct ModelMacroBase {
         
         let body =
 """
-    typealias _PredicateHelper = _\(className)PredicateHelper
-
 /// The primary ID of the object.
 /// Gets  used to reference models in relationships.
 /// Immutable after insertion into the context.
@@ -199,64 +197,6 @@ static let _fieldInformation: [Vein.FieldInformation] = [
         )
         
         return [extensionDecl]
-    }
-    
-    public func expansion(
-        of node: SwiftSyntax.AttributeSyntax,
-        providingPeersOf classDecl: ClassDeclSyntax,
-        in context: some SwiftSyntaxMacros.MacroExpansionContext
-    ) throws -> [SwiftSyntax.DeclSyntax] {
-        let className = classDecl.name.text.trimmingCharacters(in: .whitespacesAndNewlines)
-        
-        let lazyFieldVariables = classDecl.memberBlock.membersWithFieldType(.lazyField, frameworkName: frameworkName)
-        let fieldVariables = classDecl.memberBlock.membersWithFieldType(.field, frameworkName: frameworkName)
-        let persistedFields = lazyFieldVariables + fieldVariables
-        
-        var fieldNamesAndTypes = [String: String]()
-        for varDecl in persistedFields {
-            guard let binding = varDecl.bindings.first else { continue }
-            guard
-                let name = binding.pattern.as(IdentifierPatternSyntax.self)?.identifier.text,
-                let datatype = binding.typeAnnotation?.description
-            else { continue }
-            fieldNamesAndTypes[name] = datatype.dropFirst().trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-        fieldNamesAndTypes["id"] = "ULID"
-        
-        let methods = fieldNamesAndTypes.map { (name, type) in
-            """
-            func \(name)(_ op: Vein.ComparisonOperator, _ value: \(type)) -> Self {
-                    var copy = self
-                    copy.builder = builder.addCheck(op, "\(name)", value)
-                    return copy
-                }
-
-            static func \(name)(_ op: Vein.ComparisonOperator, _ value: \(type)) -> Self {
-                var copy = Self()
-                copy.builder = copy.builder.addCheck(op, "\(name)", value)
-                return copy
-            }
-            """
-        }.joined(separator: "\n    ")
-        
-        let predicateBuilder = """
-        struct _\(className)PredicateHelper: Vein.PredicateConstructor {
-            typealias Model = \(className)
-            private var builder: Vein.PredicateBuilder<\(className)>
-            
-            init() {
-                self.builder = Vein.PredicateBuilder<\(className)>()
-            }
-            
-            \(methods)
-        
-            func _builder() -> Vein.PredicateBuilder<\(className)> {
-                return builder
-            }
-        }
-        """
-        
-        return [DeclSyntax(stringLiteral: predicateBuilder)]
     }
     
     public func expansion(

@@ -3,8 +3,6 @@ import SQLiteDB
 @_exported import ULID
 
 public protocol PersistentModel: AnyObject, Sendable {
-    associatedtype _PredicateHelper: PredicateConstructor where _PredicateHelper.Model == Self
-
     var notifyOfChanges: () -> Void { get }
     
     static var schema: String { get }
