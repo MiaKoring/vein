@@ -9,7 +9,12 @@ extension ManagedObjectContext {
         if let model = identityMap.getTracked(type, id: id) {
             return model
         }
-        return try self.fetchAll(ModelPredicate(runtimeFilter: { model in model.id == id }, sql: SQLExpression<String>("id") == SQLExpression(value: id.ulidString))).first
+        return try self.fetchAll(
+            ModelPredicate<T>(
+                runtimeFilter: { model in model.id == id },
+                sql: SQLExpression<String>("id") == SQLExpression(value: id.ulidString)
+            )
+        ).first
     }
     
     public nonisolated func getModels<T: PersistentModel>(ids: [ULID], type: T.Type, observer: VeinObserver) throws(MOCError) -> [T] {
