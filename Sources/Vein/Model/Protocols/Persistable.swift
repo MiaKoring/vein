@@ -3,6 +3,31 @@ import Foundation
 import Logging
 import ULID
 
+/// Helper type to store values in JSONB format.
+public struct SQLiteJSONB: ColumnType, Persistable {
+    public typealias SQLiteType = Data
+    public typealias PersistentRepresentation = Self
+    public let jsonString: String
+    
+    public init(jsonString: String) {
+        self.jsonString = jsonString
+    }
+    
+    public static var sqliteTypeName: SQLiteTypeName { .jsonb }
+    
+    public var sqliteValue: SQLiteValue { .text(jsonString) }
+    
+    public static func decode(sqliteValue: SQLiteValue) throws(MOCError) -> SQLiteJSONB {
+        if case .text(let rawString) = sqliteValue {
+            return SQLiteJSONB(jsonString: rawString)
+        }
+        throw MOCError.propertyDecode(message: "\(Self.self)")
+    }
+    
+    public var asPersistentRepresentation: Self { self }
+    public init?(fromPersistent representation: Self) { self = representation }
+}
+
 public nonisolated protocol Persistable: Sendable {
     associatedtype PersistentRepresentation: ColumnType
     var asPersistentRepresentation: PersistentRepresentation { get }
@@ -45,6 +70,25 @@ extension ColumnType {
             default:
                 SQLExpression<SQLiteType>("?", [sqliteValue.bindingValue])
         }
+    }
+    
+    /// Only use to store values.
+    ///
+    /// Columns of type JSONB convert it to the JSONB format from a JSON string.
+    public func sqliteSetter(key: String) -> SQLiteDB.Setter {
+        if SQLiteTypeName.notNull(Self.sqliteTypeName) == .jsonb {
+            switch self.sqliteValue {
+                case .text(let jsonString):
+                    // Binds the string value and wraps it via the native database function: jsonb(?)
+                    let jsonbExpr = SQLExpression<Data>("jsonb(?)", [jsonString])
+                    return SQLExpression<Data>(key) <- jsonbExpr
+                case .null:
+                    return SQLExpression<Data?>(key) <- SQLExpression<Data?>(value: nil)
+                default:
+                    fatalError("Unexpected value structure for JSONB serialization context")
+            }
+        }
+        return self.sqliteValue.setter(withKey: key, andTypeName: Self.sqliteTypeName)
     }
 }
 
@@ -439,17 +483,30 @@ extension Optional: Persistable, ColumnType where Wrapped: Persistable {
     }
 }
 
+// An Array of ULID is persisted as JSONB.
+// The optimized JSONB format means less overhead when using json_each for filtering.
+// Vein doesn't use join tables to keep everything simpler.
+// I currently consider the performance to complexity tradeoff viable,
+// since Vein is a Framework intended to be used in apps,
+// where datasets a lot smaller than on a server are expected.
 extension Array: Persistable where Element == ULID {
-    public init?(fromPersistent representation: String) {
-        let parts = representation.split(separator: ",")
-        // If any of these fail, the data is corrupted.
-        // Corrupted data should always crash to hopefully simplify recovery.
-        let ulids = parts.compactMap { ULID(ulidString: String($0))! }
-        self = ulids
+    public typealias PersistentRepresentation = SQLiteJSONB
+    
+    public init?(fromPersistent representation: SQLiteJSONB) {
+        guard let data = representation.jsonString.data(using: .utf8),
+              let strings = try? JSONDecoder().decode([String].self, from: data) else {
+            return nil
+        }
+        self = strings.map {
+            guard let ulid = ULID(ulidString: $0) else {
+                fatalError("Found invalid ulid string in ULID array. Likely data corruption.")
+            }
+            return ulid
+        }
     }
     
-    public typealias PersistentRepresentation = String
-    public var asPersistentRepresentation: String {
-        self.map(\.ulidString).joined(separator: ",")
+    public var asPersistentRepresentation: SQLiteJSONB {
+        let serialized = "[" + self.map { "\"\($0.ulidString)\"" }.joined(separator: ",") + "]"
+        return SQLiteJSONB(jsonString: serialized)
     }
 }

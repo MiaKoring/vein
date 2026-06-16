@@ -54,7 +54,7 @@ extension [FieldInformation] {
 }
 
 extension FieldInformation {
-    package var expressible: Expressible {
+    package var fetchExpressible: Expressible {
         return switch typeName.isNull {
             case true:
                 switch SQLiteTypeName.notNull(typeName) {
@@ -62,6 +62,7 @@ extension FieldInformation {
                     case .real: SQLExpression<Double?>(key)
                     case .text: SQLExpression<String?>(key)
                     case .blob: SQLExpression<Data?>(key)
+                    case .jsonb: SQLExpression<String?>(literal: "json(\"\(key)\")")
                     default:
                         fatalError(
                             "Unexpectedly found null. Check SQLiteTypeName.notNull() for logic errors"
@@ -73,6 +74,7 @@ extension FieldInformation {
                     case .real: SQLExpression<Double>(key)
                     case .text: SQLExpression<String>(key)
                     case .blob: SQLExpression<Data>(key)
+                    case .jsonb: SQLExpression<String>(literal: "json(\"\(key)\")")
                     default:
                         fatalError(
                             "Unexpectedly found null. Check SQLiteTypeName.notNull() for logic errors"
@@ -95,7 +97,7 @@ extension FieldInformation {
                 try context.run(
                     Table(schema).addColumn(SQLExpression<String?>(key))
                 )
-            case .blob:
+            case .blob, .jsonb:
                 try context.run(
                     Table(schema).addColumn(SQLExpression<Data?>(key))
                 )

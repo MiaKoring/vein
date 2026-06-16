@@ -5,9 +5,13 @@ extension ManagedObjectContext {
     nonisolated func _writeInsert<M: PersistentModel>(_ model: M) throws(ManagedObjectContextError) {
         do {
             let table = Table(model._getSchema())
-            try connection.run(table.insert(model._fields.map {
-                return $0.persistableValue.asPersistentRepresentation.sqliteValue.setter(withKey: $0.instanceKey, andTypeName: $0.persistableValue.asPersistentRepresentation.sqliteTypeName)
-            }))
+            let values = model._fields.map {
+                return $0
+                    .persistableValue
+                    .asPersistentRepresentation
+                    .sqliteSetter(key: $0.instanceKey)
+            }
+            try connection.run(table.insert(values))
         } catch let error as ManagedObjectContextError { throw error }
         catch let error as SQLiteDB.Result {
             let parsed = error.parse()
@@ -37,13 +41,7 @@ extension ManagedObjectContext {
                         .map {
                             $0.persistableValue
                                 .asPersistentRepresentation
-                                .sqliteValue
-                                .setter(
-                                    withKey: $0.instanceKey,
-                                    andTypeName: $0.persistableValue
-                                        .asPersistentRepresentation
-                                        .sqliteTypeName
-                                )
+                                .sqliteSetter(key: $0.instanceKey)
                         }
                 )
             
