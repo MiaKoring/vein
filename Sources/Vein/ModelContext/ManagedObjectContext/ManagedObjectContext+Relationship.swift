@@ -2,8 +2,6 @@ import ULID
 import SQLiteDB
 import Foundation
 
-public typealias VeinObserver = (id: ULID, block: () -> Void)
-
 extension ManagedObjectContext {
     public nonisolated func getModel<T: PersistentModel>(id: ULID, type: T.Type) throws(MOCError) -> T? {
         if let model = identityMap.getTracked(type, id: id) {
@@ -17,7 +15,13 @@ extension ManagedObjectContext {
         ).first
     }
     
-    public nonisolated func getModels<T: PersistentModel>(ids: [ULID], type: T.Type, observer: VeinObserver) throws(MOCError) -> [T] {
+    public nonisolated func getModels<T: PersistentModel>(
+        ids: [ULID],
+        type: T.Type,
+        requestingModel: any PersistentModel,
+        fieldKey: String,
+        inverseKey: String?
+    ) throws(MOCError) -> [T] {
         var models = [ULID: T]()
         
         var identityMapMisses: [ULID] = []
@@ -37,9 +41,22 @@ extension ManagedObjectContext {
         var sortedModels: [T] = []
         let isInMigration = isInActiveMigration.value
         for id in ids {
-            if let model = models[id] {
-                model._observers.value[observer.id] = observer.block
-                sortedModels.append(model)
+            if let target = models[id] {
+                target._observers.value.addObserver(id: requestingModel.id, key: fieldKey, observer: {
+                    guard !VeinNotificationGuard.isProcessing else { return }
+                    VeinNotificationGuard.$isProcessing.withValue(true) {
+                        requestingModel.notifyOfChanges()
+                    }
+                })
+                if let inverseKey {
+                    requestingModel._observers.value.addObserver(id: target.id, key: inverseKey, observer: { [weak target] in
+                        guard !VeinNotificationGuard.isProcessing else { return }
+                        VeinNotificationGuard.$isProcessing.withValue(true) {
+                            target?.notifyOfChanges()
+                        }
+                    })
+                }
+                sortedModels.append(target)
             } else {
                 if !isInMigration {
                     Self.logger.warning(
