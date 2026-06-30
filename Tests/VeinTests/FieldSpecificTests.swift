@@ -13,7 +13,6 @@ struct FieldSpecificTests {
     func testLazyFieldReturnsStoreWithoutContext() async throws {
         let field = LazyField(wrappedValue: "Test")
         #expect(field.wrappedValue == "Test")
-        print(field.callBeforeChange)
     }
     
     @Test

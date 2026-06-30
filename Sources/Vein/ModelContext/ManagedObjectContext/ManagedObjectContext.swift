@@ -3,15 +3,20 @@ import Foundation
 import ULID
 import Crypto
 import Logging
+import Atomics
 #if canImport(AppKit) || canImport(UIKit)
 import KeychainAccess
 #elseif os(Linux)
 @_exported import KeyringAccess
 #endif
 
-typealias Connection = SQLiteDB.Connection
+@_spi(VeinSurface)
+@_spi(VeinTesting)
+public typealias Connection = SQLiteDB.Connection
 
 public actor ManagedObjectContext {
+    @_spi(VeinSurface)
+    public static nonisolated let callBeforeChange = ManagedAtomic<Bool>(false)
     public static let logger = Logger(label: "ManagedObjectContext")
     package nonisolated let connection: SQLiteDB.Connection
     public nonisolated unowned let modelContainer: ModelContainer

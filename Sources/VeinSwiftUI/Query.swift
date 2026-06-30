@@ -1,7 +1,6 @@
 #if canImport(SwiftUI)
 import SwiftUI
 import Combine
-import Vein
 import Logging
 
 @MainActor

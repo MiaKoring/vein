@@ -52,14 +52,18 @@ public final class ModelContainer: @unchecked Sendable {
     ///     }
     /// #endif
     /// ```
-    public init(
+    ///
+    /// Do not set `_notifyBeforeChange` yourself, you might break UI updates and/or animations doing so.
+    @_spi(VeinSurface) public init(
         _ versionedSchema: VersionedSchema.Type,
         migration: SchemaMigrationPlan.Type,
         at path: String?,
         appID: String,
         encryptionEnabled: Bool = true,
-        logConfiguration: LogConfiguration? = nil
+        logConfiguration: LogConfiguration? = nil,
+        _notifyBeforeChange: Bool
     ) throws(ManagedObjectContextError) {
+        ManagedObjectContext.callBeforeChange.store(_notifyBeforeChange, ordering: .relaxed)
         if let logConfiguration {
             self.logConfiguration = logConfiguration
         } else {
@@ -146,14 +150,18 @@ public final class ModelContainer: @unchecked Sendable {
     ///     }
     /// #endif
     /// ```
-    init(
+    ///
+    /// Do not set `_notifyBeforeChange` yourself, you might break UI updates and/or animations doing so.
+    @_spi(VeinSurface) public init(
         _ versionedSchema: VersionedSchema.Type,
         migration: SchemaMigrationPlan.Type,
         connection: Connection,
         appID: String,
         encryptionEnabled: Bool = true,
-        logConfiguration: LogConfiguration? = nil
+        logConfiguration: LogConfiguration? = nil,
+        _notifyBeforeChange: Bool
     ) throws(ManagedObjectContextError) {
+        ManagedObjectContext.callBeforeChange.store(_notifyBeforeChange, ordering: .relaxed)
         if let logConfiguration {
             self.logConfiguration = logConfiguration
         } else {
