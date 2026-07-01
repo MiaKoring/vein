@@ -44,7 +44,7 @@ struct FilteredQueryTestView: SwiftUI.View {
     }
 }
 
-@Suite
+@Suite(.disabled({ProcessInfo.isRunningHeadless}))
 @MainActor
 struct QueryTests {
     @Test(.timeLimit(.minutes(1)))
@@ -180,13 +180,12 @@ struct QueryTests {
         // after editing a model that drops out of the predicate filter.
         hostingController.view.layoutSubtreeIfNeeded()
         
-        if !ProcessInfo.isRunningHeadless {
-            guard let resultsAfterEdit = await iterator.next() else {
-                Issue.record("Expected updated results after editing model")
-                return
-            }
-            #expect(resultsAfterEdit == Array(models[1...]))
+        
+        guard let resultsAfterEdit = await iterator.next() else {
+            Issue.record("Expected updated results after editing model")
+            return
         }
+        #expect(resultsAfterEdit == Array(models[1...]))
         
         continuation.finish()
     }
