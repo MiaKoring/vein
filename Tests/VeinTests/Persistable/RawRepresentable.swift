@@ -48,7 +48,6 @@ struct PersistableTests {
     @Test
     func testRawRepresentablePersistableUpdate() async throws {
         let connection = try setupContainer()
-        let newObjectID = try runUpdate()
 
         let container = try ModelContainer(
             V0_0_1.self,
@@ -57,6 +56,8 @@ struct PersistableTests {
             appID: "de.amethystsoft.vein.tests.persistable",
             encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
+
+        try runUpdate()
 
         guard
             let model = try container.context.fetchAll(V0_0_1.Account.self).first
@@ -67,7 +68,7 @@ struct PersistableTests {
 
         #expect(model.accountType == .user)
 
-        func runUpdate() throws -> ObjectIdentifier? {
+        func runUpdate() throws {
             let updateContainer = try ModelContainer(
                 V0_0_1.self,
                 migration: Migration.self,
@@ -80,7 +81,7 @@ struct PersistableTests {
                 let model = try updateContainer.context.fetchAll(V0_0_1.Account.self).first
             else {
                 Issue.record("Unexpectedly found no model.")
-                return nil
+                return
             }
 
             #expect(model.accountType == .admin)
@@ -90,8 +91,6 @@ struct PersistableTests {
             #expect(updateContainer.context.hasChanges)
 
             try updateContainer.context.save()
-
-            return ObjectIdentifier(model)
         }
     }
 
