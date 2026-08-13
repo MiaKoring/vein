@@ -67,14 +67,15 @@
     }
 
     package final class QueryObserver<M: PersistentModel>: @unchecked Sendable {
+        var id = UUID()
         var didChange = Publisher()
         static var logger: Logger { Logger(label: "Vein.QueryObserver<\(M.self)>") }
 
         typealias ModelType = M
 
-        private var publishToEnclosingObserver: (() -> Void)?
+        private let enclosingObservers = Mutex([UUID: () -> Void]())
 
-        fileprivate var primaryObserver: QueryObserver<M>?
+        var primaryObserver: QueryObserver<M>?
 
         let predicate: ModelPredicate<M>
 
@@ -101,10 +102,10 @@
 
             if primary !== self {
                 self.primaryObserver = primary
-                let old = primary.publishToEnclosingObserver
-                primary.publishToEnclosingObserver = { [weak self] in
-                    old?()
-                    self?.didChange.send()
+                primary.enclosingObservers.mutate { observers in
+                    observers[id] = { [weak self] in
+                        self?.didChange.send()
+                    }
                 }
             } else {
                 fetchInitialResults(with: context)
@@ -135,7 +136,7 @@
             // there is only one Query instance kept in the context for the same filter.
             // this triggers view updates on any other Query oberservers using the registered
             // Query as their source
-            publishToEnclosingObserver?()
+            publishToEnclosingObserver()
             didChange.send()
         }
 
@@ -164,7 +165,7 @@
                 results?.removeAll(where: { $0.id == model.id })
             }
 
-            publishToEnclosingObserver?()
+            publishToEnclosingObserver()
             didChange.send()
         }
 
@@ -179,8 +180,22 @@
             guard let model = model as? ModelType else { return }
             results?.removeAll(where: { $0.id == model.id })
 
-            publishToEnclosingObserver?()
+            publishToEnclosingObserver()
             didChange.send()
+        }
+
+        func publishToEnclosingObserver() {
+            let observers = enclosingObservers.mutate { $0.values }
+            for publish in observers {
+                publish()
+            }
+        }
+
+        deinit {
+            guard let primaryObserver else { return }
+            primaryObserver.enclosingObservers.mutate { observers in
+                observers[id] = nil
+            }
         }
     }
 
