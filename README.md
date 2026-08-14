@@ -1,4 +1,5 @@
 # Amethyst Vein
+> A familiar API, built better and open. Vein brings a refined, SwiftData-like interface to Apple, Linux, Android, and Windows, powered by a completely rewritten, highly optimized backend.
 
 [![Sponsor Vein Development](https://img.shields.io/badge/Sponsor-Mia%20Koring-DE69FF?logo=github-sponsors)](https://github.com/sponsors/miakoring)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/amethystsoft/vein/swift-test-mac.yml?label=mac)
@@ -6,10 +7,143 @@
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/amethystsoft/vein/swift-test-android.yml?label=android)
 ![GitHub Actions Workflow Status](https://img.shields.io/github/actions/workflow/status/amethystsoft/vein/swift-test-windows.yml?label=windows)
 
+[Table of Contents](#table-of-contents)
+[Docs and Tutorials](https://vein.amethystsoft.de)
+
+## Example
+### Declaring Models
+```swift
+enum V0_0_1: VersionedSchema {
+    static let version = ModelVersion(0, 0, 1)
+    static let models: [any PersistentModel.Type] = [
+        Post.self,
+        Attachment.self
+    ]
+
+    @Model
+    final class Post {
+        var title: String
+        var content: String
+
+        @Relationship(
+            inverse: \Attachment.post,
+            deleteRule: .cascade
+        )
+        var attachments: [Attachment]
+
+        init(title: String, content: String) {
+            self.title = title
+            self.content = content
+        }
+    }
+
+    @Model
+    final class Attachment {
+        @Relationship
+        var post: Post?
+
+        var name: String
+        var fileType: FileType
+        var sizeMiB: Double
+
+        @LazyField
+        var data: Data?
+
+        init(name: String, fileType: FileType, data: Data) {
+            self.name = name
+            self.fileType = fileType
+            self.sizeMiB = Double(data.count) / 1024 / 1024
+            self.data = data
+        }
+
+        enum FileType: String, RawRepresentablePersistable {
+            case png
+            case jpg
+            case gif
+            case swift
+            // ...
+        }
+    }
+}
+
+typealias Post = V0_0_1.Post
+typealias Attachment = V0_0_1.Attachment
+
+enum Migration: SchemaMigrationPlan {
+    static let schemas: [VersionedSchema.Type] = [
+        V0_0_1.self
+    ]
+
+    static let stages: [MigrationStage] = []
+}
+```
+
+### Use
+
+```swift
+func setupAndUseVein() throws {
+    // Optional: Setup keyring for Linux support
+    #if os(Linux)
+        Keyring.appIdentifier.withLock { $0 = "com.example.app" }
+    #endif
+
+    let container = try ModelContainer(
+        V0_0_1.self, // Your VersionedSchema
+        migration: Migration.self, // Your SchemaMigrationPlan
+        at: "path/to/db.sqlite3", // or nil for in memory
+        appID: "com.example.app" // The id of your app
+    )
+
+    try container.migrate()
+
+    let post = Post(title: "How to use Vein?", content: "It's very easy.")
+    try container.context.insert(post)
+
+    post.content = "What did I tell you?"
+
+    try container.context.save()
+
+    let posts = try container.context.fetchAll(#Predicate<Post> { post in
+        post.title.contains("Vein")
+    }) // gives back [post]
+
+    try container.context.delete(post)
+}
+```
+
+### Use in Views
+More here: [SwiftUI](https://vein.amethystsoft.de/tutorials/swiftui-table-of-contents) [SwiftCrossUI](https://vein.amethystsoft.de/tutorials/scui-table-of-contents)
+
+```swift
+struct ContentView: View {
+    @Query(#Predicate<Post> { post in
+        post.title.contains("Swift")
+    })
+    var posts: [Post]
+
+    @Environment(\.modelContext) var context
+
+    var body: some View {
+        Button("Add post") {
+            do {
+                try context.insert(Post(title: "New Post", content: "..."))
+                try context.save()
+            } catch {
+                // Update some error state.
+            }
+        }
+        List(posts) { post in
+            Text(post.title)
+        }
+    }
+}
+```
+
 ## Table of Contents
 - [What is Vein](#what)
 - [Getting Started & Docs](#getting-started--documentation)
 - [Why Vein](#why-vein)
+  - [Same engine everywhere](#same-engine-everywhere)
   - [Mission](#the-mission-platform-independent-sync)
   - [Key Features](#key-features)
   - [Transactions](#how-transactions-work)
@@ -38,6 +172,15 @@ Amethyst Vein was built out of frustration with the current state of local persi
 * **Core Data is dated:** It's old, doesn't integrate nicely with declarative UI frameworks and like SwiftData it's limited to Apple's platforms.
 * **Realm is deprecated & Apple-locked:** With MongoDB deprecating the Atlas Device SDK (Realm's sync engine), a massive gap has been left for cross-platform sync. Additionally, while Realm has SDKs for other languages, the `RealmSwift` SDK relies heavily on the Objective-C runtime (more than 50% objc code in RealmSwift). This makes it virtually impossible to compile your Swift models on Android, Linux, or Windows. And it just doesn't feel as nice as SwiftData.
 * **Cross-platform Swift is growing:** With the rise of Swift on Android, Windows, Linux, and embedded systems, there is a critical need for a modern, local-first, thread-agnostic ORM where the exact same Swift models compile and run on every platform.
+
+### Same Engine Everywhere
+Vein is backed by the exact same SQLite + SQLCipher database engine across every platform. Unlike other frameworks that wrap Apple-exclusive APIs on iOS and switch engines elsewhere, Vein shares its entire core logic globally.
+
+- Unified Core: `VeinCore`, `VeinSwiftUI`, and `VeinSCUI` are lightweight, platform-specific wrappers around the single, `Vein` target.
+- Consistent Macros: The Swift macros generate identical model code on every OS. The only difference is additive, framework-specific code for UI reactivity (like SwiftUI vs. SwiftCrossUI).
+- Zero Engine Drift: The only platform-specific implementation detail is secure database key storage.
+
+This architectural consistency guarantees the exact same behavior, performance, and migration stability no matter where you're running it.
 
 ### The Mission: Platform-Independent Sync
 Vein's long-term goal is to fill the void left by Realm's deprecation. We aim to construct a **platform-independent sync engine** that provides the same seamless device-to-cloud experience, but with privacy at its core via **end-to-end encryption (E2EE)** and selfhostability.
