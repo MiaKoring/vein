@@ -16,6 +16,10 @@
     import Logging
     import Foundation
 
+    #if VeinFilter
+        import VeinFilter
+    #endif
+
     @MainActor
     @propertyWrapper
     public class Query<M: PersistentModel>: @MainActor ObservableProperty {
@@ -36,7 +40,7 @@
         public typealias WrappedType = [M]
         var queryObserver: QueryObserver<M>
         var context: ManagedObjectContext?
-        let sortDescriptors: [SortDescriptor<M>]
+        let sortDescriptors: [SortRule<M>]
 
         public var wrappedValue: [M] {
             if let results = queryObserver.results {
@@ -52,41 +56,45 @@
                 .sorted(using: sortDescriptors)
         }
 
-        public init(_ predicate: ModelPredicate<M> = ModelPredicate<M>.all) {
-            self.queryObserver = QueryObserver<M>(predicate)
-            self.sortDescriptors = [SortDescriptor<M>(\.id)]
-        }
-
-        public init(_ predicate: Predicate<M>) {
+        @available(macOS 14, iOS 17, tvOS 17, macCatalyst 17, *)
+        public init(
+            _ predicate: Predicate<M>,
+            sortBy rules: [SortRule<M>] = [SortRule<M>(\.id)]
+        ) {
             do {
                 let modelPredicate = try ModelPredicate(predicate)
                 self.queryObserver = QueryObserver(modelPredicate)
-                self.sortDescriptors = [SortDescriptor<M>(\.id)]
+                self.sortDescriptors = rules
             } catch {
                 fatalError(
                     "Creating ModelPredicate from predicate '\(predicate.expression)' failed with: \(error.localizedDescription)"
                 )
             }
         }
+
+        #if VeinFilter
+            public init(
+                _ predicate: Filter1<M>,
+                sortBy rules: [SortRule<M>] = [SortRule<M>(\.id)]
+            ) {
+                do {
+                    let modelPredicate = try ModelPredicate(predicate)
+                    self.queryObserver = QueryObserver(modelPredicate)
+                    self.sortDescriptors = rules
+                } catch {
+                    fatalError(
+                        "Creating ModelPredicate from predicate '\(predicate.expression)' failed with: \(error.localizedDescription)"
+                    )
+                }
+            }
+        #endif
 
         public init(
             _ predicate: ModelPredicate<M> = ModelPredicate<M>.all,
-            sortBy descriptors: [SortDescriptor<M>]
+            sortBy descriptors: [SortRule<M>] = [SortRule<M>(\.id)]
         ) {
             self.queryObserver = QueryObserver<M>(predicate)
             self.sortDescriptors = descriptors
-        }
-
-        public init(_ predicate: Predicate<M>, sortBy descriptors: [SortDescriptor<M>]) {
-            do {
-                let modelPredicate = try ModelPredicate(predicate)
-                self.queryObserver = QueryObserver(modelPredicate)
-                self.sortDescriptors = descriptors
-            } catch {
-                fatalError(
-                    "Creating ModelPredicate from predicate '\(predicate.expression)' failed with: \(error.localizedDescription)"
-                )
-            }
         }
     }
 

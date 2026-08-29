@@ -18,7 +18,7 @@ extension ManagedObjectContext {
     /// Returns all models matching the predicate.
     nonisolated func _fetchAll<T: PersistentModel>(
         _ predicate: ModelPredicate<T>,
-        sortingBy sortDescriptors: [SortDescriptor<T>]?
+        sortingBy sortDescriptors: [SortRule<T>]?
     ) throws(MOCError) -> [T] {
         do {
             let table = Table(T.schema).filter(predicate.sql)
@@ -112,8 +112,7 @@ extension ManagedObjectContext {
                     predicate.runtimeFilter(model)
                 { models.append(model) }
             }
-
-            return models.sorted(using: sortDescriptors ?? [SortDescriptor<T>(\.id)])
+            return models.sorted(using: sortDescriptors ?? [SortRule<T>(\.id)])
         } catch let error as ManagedObjectContextError {
             throw error
         } catch let error as SQLiteDB.Result {
