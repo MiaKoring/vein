@@ -50,6 +50,11 @@ public struct ModelMacroBase {
 
         let eagerFields = fieldVariables.fields()
 
+        classDecl.ensureNotSettingToRelationshipInInit(
+            in: context,
+            relationshipPropertyNames: Array(relationshipFields.keys)
+        )
+
         // MARK: - Setup Fields & _fields accessor
         var allFieldNames = Array(eagerFields.keys) + Array(relationshipFields.keys)
         allFieldNames.append(contentsOf: lazyFields.keys)
@@ -218,7 +223,8 @@ public struct ModelMacroBase {
         conformingTo protocols: [SwiftSyntax.TypeSyntax],
         in context: some MacroExpansionContext
     ) throws -> [ExtensionDeclSyntax] {
-        let modelVersionString = "\("\(type)".prefix(while: { $0 != "."})).version"
+        let typeName = "\(type)"
+        let modelVersionString = "\(typeName.prefix(while: { $0 != "."})).version"
         let extensionDecl = try ExtensionDeclSyntax(
             """
             extension \(raw: type): Vein.PersistentModel, @unchecked Sendable {
@@ -227,6 +233,19 @@ public struct ModelMacroBase {
             }
             """
         )
+
+        if !typeName.contains(".") {
+            context.diagnose(Diagnostic(
+                node: node,
+                message: ErrorDiag(
+                    message: """
+                        Models need to be enclosed in a VersionedSchema enum. \
+                        Otherwise they will not function correctly.
+                        """,
+                    severity: .error
+                )
+            ))
+        }
 
         return [extensionDecl]
     }
@@ -296,10 +315,15 @@ public struct ModelMacroBase {
     }
 }
 
-public struct DebugDiag: DiagnosticMessage {
+public struct ErrorDiag: DiagnosticMessage {
     public let message: String
-    public var diagnosticID: MessageID { .init(domain: "VeinMacros", id: "debug") }
-    public var severity: DiagnosticSeverity { .warning }
+    public var diagnosticID: MessageID { .init(domain: "VeinMacros", id: "error") }
+    public var severity: DiagnosticSeverity
+
+    init(message: String, severity: DiagnosticSeverity = .error) {
+        self.message = message
+        self.severity = severity
+    }
 }
 
 public enum FieldType {
@@ -507,5 +531,45 @@ extension ExprSyntax {
             root: rootComponent.trimmedDescription,
             last: lastPropertyComponent.trimmedDescription
         )
+    }
+}
+
+extension ClassDeclSyntax {
+    func ensureNotSettingToRelationshipInInit(
+        in context: some MacroExpansionContext,
+        relationshipPropertyNames: [String]
+    ) {
+        let initializers = self.memberBlock.members.compactMap {
+            $0.decl.as(InitializerDeclSyntax.self)
+        }
+
+        if initializers.isEmpty {
+            return
+        }
+
+        for initializer in initializers {
+            initializer.ensureNotSettingToRelationship(
+                in: context,
+                relationshipPropertyNames: relationshipPropertyNames
+            )
+        }
+    }
+}
+
+extension InitializerDeclSyntax {
+    func ensureNotSettingToRelationship(
+        in context: some MacroExpansionContext,
+        relationshipPropertyNames: [String]
+    ) {
+        let visitor = InitializerVisitor(
+            forbiddenSelfAssignments: Set(relationshipPropertyNames),
+            in: context
+        )
+
+        guard let body = self.body else {
+            return
+        }
+
+        visitor.walk(body)
     }
 }
