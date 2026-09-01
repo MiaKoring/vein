@@ -67,6 +67,12 @@ extension PersistentModel {
     public var typeIdentifier: ObjectIdentifier { ObjectIdentifier(Self.self) }
     public func _getSchema() -> String { Self.schema }
 
+    /// Indicates whether the model is already managed by a context.
+    /// `false` if the context is `nil`.
+    public var isManaged: Bool {
+        context != nil
+    }
+
     /// The context the model instance is managed by.
     public var context: ManagedObjectContext? {
         get {
