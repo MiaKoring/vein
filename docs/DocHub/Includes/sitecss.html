@@ -1,0 +1,43 @@
+<style>
+.font2XL {
+    font-size: 2rem;
+}
+
+.font3XL {
+    font-size: 36px;
+}
+
+.logoWidth {
+    width: 70px;
+}
+
+.primary-button {
+    height: 40px;
+    background-color: var(--accent);
+    border-radius: 10px;
+    align-items: center;
+    padding-left: 16px;
+    padding-right: 16px;
+    color: var(--fg-inverse);
+    display: inline-flex;
+    font-size: 14px;
+}
+
+.primary-button:hover {
+    background-color: color-mix(in srgb, var(--accent) 90%, transparent);
+}
+
+@media (min-width: 768px) {
+    .md\:font2XL {
+        font-size: 3.5rem; /* Bzw. dein big.fontSize Wert */
+    }
+    
+    .md\:font3XL {
+        font-size: 75px;
+    }
+    
+    .md\:logoWidth {
+        width: 90px;
+    }
+}
+</style>

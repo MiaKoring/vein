@@ -1,0 +1,78 @@
+<script>
+    class GitHubStar extends HTMLElement {
+        constructor() {
+            super();
+            this.attachShadow({ mode: "open" });
+        }
+        
+        connectedCallback() {
+            const owner = this.getAttribute("owner");
+            const repo = this.getAttribute("repo");
+            this.render(owner, repo);
+            this.fetchStars(owner, repo);
+        }
+        
+        async fetchStars(owner, repo) {
+            try {
+                const response = await fetch(
+                                             `https://api.github.com/repos/${owner}/${repo}`,
+                                             );
+                                             const data = await response.json();
+                                             const count = data.stargazers_count;
+                                             if (count !== undefined) {
+                                                 this.shadowRoot.querySelector(".count").textContent = count;
+                                                 this.shadowRoot.querySelector(".count").style.display =
+                                                 "inline-block";
+                                             }
+            } catch (error) {
+                console.error("Failed to fetch GitHub stars:", error);
+            }
+        }
+        
+        render(owner, repo) {
+            this.shadowRoot.innerHTML = `
+           <style>
+             :host { --primary: #DE69FF; }
+             .btn {
+               display: inline-flex;
+               align-items: center;
+               gap: 8px;
+               padding: 0px 16px;
+               background: rgba(14, 165, 233, 0.05);
+               color: var(--primary);
+               border: 1px solid rgba(14, 165, 233, 0.5);
+               border-radius: 10px;
+               font-family: system-ui, sans-serif;
+               font-size: 14px;
+               height: 40px;
+               font-weight: 500;
+               text-decoration: none;
+               transition: all 0.2s;
+             }
+             .btn:hover {
+               background: rgba(14, 165, 233, 0.2);
+               border-color: var(--primary);
+             }
+             .count {
+               display: none;
+               background: #DE69FF80;
+               color: var(--fg);
+               padding: 2px 8px;
+               border-radius: 99px;
+               font-size: 12px;
+             }
+             svg { width: 16px; height: 16px; fill: currentColor; }
+           </style>
+           <a href="https://github.com/${owner}/${repo}" target="_blank" rel="noopener noreferrer" class="btn">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+               <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+             </svg>
+             <span style="color: var(--fg);">Star on GitHub</span>
+             <span class="count"></span>
+           </a>
+         `;
+        }
+    }
+    
+    customElements.define("github-star", GitHubStar);
+</script>
