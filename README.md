@@ -251,3 +251,6 @@ If Vein is valuable to your business, please consider supporting its development
 Licenses of third party projects are in the Acknowledgements folder.
 * Vein contains a modified copy of [yaslab/ULID.swift](https://github.com/yaslab/ULID.swift.git).
   The original MIT license can be found in [Acknowledgements/ULID-LICENSE](./Acknowledgements/yaslab_ULID.swift/LICENSE).
+
+## Disclaimer
+Amethyst Vein is an independent open-source project and is not affiliated with, sponsored, or endorsed by Apple Inc. SwiftUI, SwiftData, @Model and @Query are trademarks of Apple Inc., registered in the U.S. and other countries.
