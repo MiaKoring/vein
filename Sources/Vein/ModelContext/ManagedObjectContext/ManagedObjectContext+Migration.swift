@@ -54,39 +54,6 @@ extension ManagedObjectContext {
         }
     }
 
-    internal nonisolated func updateExecutedAutoheals(adding heals: [String]) throws {
-        guard !heals.isEmpty else { return }
-        guard let table = try _getSystemTable() else {
-            let serialized = heals.map { #""\#($0)""# }.joined(separator: ",")
-            let insert = SystemTable.systemTable.insert(
-                [
-                    SQLExpression<Int64>(SystemTable.veinVersionMajor)
-                        <- SQLExpression<Int64>(value: Int64(Self.veinVersion.major)),
-                    SQLExpression<Int64>(SystemTable.veinVersionMinor)
-                        <- SQLExpression<Int64>(value: Int64(Self.veinVersion.minor)),
-                    SQLExpression<Int64>(SystemTable.veinVersionPatch)
-                        <- SQLExpression<Int64>(value: Int64(Self.veinVersion.patch)),
-                    SQLExpression<String>(SystemTable.appliedAutoheals)
-                        <- SQLExpression<String>(value: "[\(serialized)]")
-                ]
-            )
-            try connection.run(insert)
-            return
-        }
-
-        var autoheals = table.appliedAutheals
-        autoheals.append(contentsOf: heals)
-        let serialized = String(
-            decoding: try JSONEncoder().encode(autoheals),
-            as: UTF8.self
-        )
-
-        let update = SystemTable.systemTable.filter(SQLExpression<Bool>(value: true))
-            .update(SQLExpression<String>(SystemTable.appliedAutoheals)
-                <- SQLExpression<String>(value: serialized))
-        try connection.run(update)
-    }
-
     internal nonisolated func _getSystemTable() throws -> SystemTable.DTO? {
         let select = SystemTable.systemTable.select([
             SystemTable.veinVersionMajor,

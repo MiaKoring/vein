@@ -79,19 +79,6 @@ extension FieldBase {
         WrappedType.sqliteTypeName
     }
 
-    var instanceObjectID: ObjectIdentifier {
-        guard let _model else {
-            fatalError(MOCError
-                .modelReference(message: """
-                    raised by Field property of Type '\(WrappedType.self)' \
-                    on \(model?._getSchema() ?? "Unknown model type")
-                    """)
-                .localizedDescription
-            )
-        }
-        return _model.typeIdentifier
-    }
-
     var instanceSchema: String {
         guard let _model else {
             fatalError(MOCError
@@ -222,16 +209,6 @@ extension FieldBase {
         } catch {
             fatalError(error.localizedDescription)
         }
-    }
-
-    func asDTO() -> PersistedFieldDTO {
-        PersistedFieldDTO(
-            key: instanceKey,
-            id: instanceID,
-            schema: instanceSchema,
-            sqliteType: persistableValue.asPersistentRepresentation.sqliteTypeName,
-            enclosingObjectID: instanceObjectID
-        )
     }
 
     func migrate(on builder: inout Vein.TableBuilder) {
