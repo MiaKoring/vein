@@ -22,14 +22,14 @@ import Testing
 #endif
 
 @Suite
-struct FetchCount {
+struct Fetch {
     @Test
     func fetchCountIsCorrect() async throws {
         let container = try ModelContainer(
             V0_0_1.self,
             migration: Migration.self,
             at: nil,
-            appID: "de.amethystsoft.vein.FetchCount",
+            appID: "de.amethystsoft.vein.Fetch",
             encryptionEnabled: false
         )
 
@@ -62,6 +62,56 @@ struct FetchCount {
 
         let count4 = try container.context.fetchCount(FetchDescriptor(model: V0_0_1.Test.self))
         #expect(count4 == 200)
+    }
+    
+    @Test
+    func `PaginatedFetchDescriptor with limit 0 returns empty result`() throws {
+        let container = try ModelContainer(
+            V0_0_1.self,
+            migration: Migration.self,
+            at: nil,
+            appID: "de.amethystsoft.vein.Fetch",
+            encryptionEnabled: false
+        )
+        
+        for i in 0..<100 {
+            let model = V0_0_1.Test(flag: i % 2 == 0)
+            try container.context.insert(model)
+        }
+        try container.context.save()
+        
+        let result = try container.context.fetch(
+            PaginatedFetchDescriptor(model: V0_0_1.Test.self, limit: 0, offset: 0)
+        )
+        let result1 = try container.context.fetchAll(V0_0_1.Test.self)
+        
+        #expect(result.isEmpty)
+        #expect(result1.count == 100)
+    }
+    
+    @Test
+    func `PaginatedFetchDescriptor with offset larger than count returns empty result`() throws {
+        let container = try ModelContainer(
+            V0_0_1.self,
+            migration: Migration.self,
+            at: nil,
+            appID: "de.amethystsoft.vein.Fetch",
+            encryptionEnabled: false
+        )
+        
+        for i in 0..<100 {
+            let model = V0_0_1.Test(flag: i % 2 == 0)
+            try container.context.insert(model)
+        }
+        try container.context.save()
+        
+        let result = try container.context.fetch(
+            PaginatedFetchDescriptor(model: V0_0_1.Test.self, limit: 100, offset: 150)
+        )
+        let result1 = try container.context.fetchAll(V0_0_1.Test.self)
+        
+        #expect(result.isEmpty)
+        #expect(result1.count == 100)
     }
 }
 
