@@ -202,6 +202,9 @@ extension ManagedObjectContext {
     public nonisolated func insert<M: PersistentModel>(
         _ model: M
     ) throws(ManagedObjectContextError) {
+        guard model._isPreparedForDeletion == false else {
+            throw ManagedObjectContextError.cannotReInsertDeletedModel
+        }
         _updateModelMetadata(on: model)
         guard model.context == nil else {
             throw MOCError
@@ -216,8 +219,8 @@ extension ManagedObjectContext {
 
         model._setupFields()
 
-        // An insert invalidates existing deletes and touches
-        writeCache.mutate { inserts, touches, deletes, _ in
+        // An insert invalidates existing touches
+        writeCache.mutate { inserts, touches, _, _ in
             inserts[
                 model.typeIdentifier,
                 default: [:]
@@ -230,15 +233,6 @@ extension ManagedObjectContext {
 
             if touches[model.typeIdentifier]?.isEmpty ?? false {
                 touches[model.typeIdentifier] = nil
-            }
-
-            deletes[
-                model.typeIdentifier,
-                default: [:]
-            ][model.id] = nil
-
-            if deletes[model.typeIdentifier]?.isEmpty ?? false {
-                deletes[model.typeIdentifier] = nil
             }
         }
         model.context = self
@@ -377,6 +371,10 @@ extension ManagedObjectContext {
     }
 
     /// Delete a batch of models.
+    @available(*, deprecated, message: """
+            Please use regular deletes for data integrity reasons.
+            This function will be removed in a future release.
+        """)
     public nonisolated func batchDelete<M: PersistentModel>(
         _ models: [M]
     ) throws(ManagedObjectContextError) {

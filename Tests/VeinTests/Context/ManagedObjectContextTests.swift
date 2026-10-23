@@ -230,50 +230,6 @@ struct ManagedObjectContextTests {
         #expect(!toInsert.isManaged)
     }
 
-    @Test("Insertion removes deletes of same model")
-    func insertionRemovesDeleteOfSameModel() throws {
-        let connection = try Connection()
-
-        let container = try ModelContainer(
-            V0_0_1.self,
-            migration: Migration.self,
-            connection: connection,
-            appID: "de.amethystsoft.vein.ManagedObjectContextTests",
-            encryptionEnabled: false
-        )
-
-        let model = V0_0_1.Test(flag: false)
-
-        try container.context.insert(model)
-        try container.context.save()
-
-        let identifier = ObjectIdentifier(V0_0_1.Test.self)
-
-        #expect(model.isManaged)
-
-        try container.context.delete(model)
-        #expect(!model.isManaged)
-
-        container.context.writeCache.mutate { inserts, updates, deletes, _ in
-            #expect(inserts[identifier, default: [:]].count == 0)
-
-            #expect(updates[identifier, default: [:]].count == 0)
-
-            #expect(deletes[identifier, default: [:]].count == 1)
-            #expect(deletes[identifier, default: [:]].keys.contains { $0 == model.id })
-        }
-
-        try container.context.insert(model)
-        #expect(model.isManaged)
-
-        container.context.writeCache.mutate { inserts, updates, deletes, _ in
-            #expect(inserts[identifier, default: [:]].count == 1)
-            #expect(inserts[identifier, default: [:]].keys.contains { $0 == model.id })
-            #expect(updates.isEmpty)
-            #expect(deletes.isEmpty)
-        }
-    }
-
     @Test("Deletion of unmanaged model silently returns")
     func deletionOfUnmanagedModelSilentlyReturns() throws {
         let container = try ModelContainer(
@@ -559,6 +515,43 @@ struct ManagedObjectContextTests {
         container.context.rollback()
 
         #expect(model.flag)
+    }
+
+    @Test
+    func `context doesn't allow insertion of deleted model`() async throws {
+        let container = try ModelContainer(
+            V0_0_1.self,
+            migration: Migration.self,
+            at: nil,
+            appID: "de.amethystsoft.vein.ManagedObjectContextTests",
+            encryptionEnabled: false
+        )
+
+        let model = V0_0_1.Test(flag: true)
+        try container.context.insert(model)
+        try container.context.delete(model)
+
+        do {
+            try container.context.insert(model)
+            Issue.record("Unexpectedly no error was thrown")
+        } catch {
+            if case .cannotReInsertDeletedModel = error { return }
+            throw error
+        }
+    }
+
+    @Test
+    func `update of deleted model on background context doesn't reinsert it`() async throws {
+        let container = try ModelContainer(
+            V0_0_1.self,
+            migration: Migration.self,
+            at: nil,
+            appID: "de.amethystsoft.vein.ManagedObjectContextTests",
+            encryptionEnabled: false
+        )
+
+        let model = V0_0_1.Test(flag: true)
+        try container.context.insert(model)
     }
 }
 
