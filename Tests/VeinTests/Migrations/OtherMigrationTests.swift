@@ -135,6 +135,38 @@ struct OtherMigrationTests {
             throw error
         }
     }
+
+    @Test
+    @MainActor
+    func `insert of unpermitted model during migration throws`() async throws {
+        let container = try ModelContainer(
+            Version0_0_2.self,
+            migration: MigrationPlan.self,
+            at: nil,
+            appID: "de.amethystsoft.vein.tests.OtherMigrationTests",
+            encryptionEnabled: false
+        )
+
+        let model = Version0_0_2.BasicModel(field: "lol")
+        try container.context.insert(model)
+        try container.context.save()
+
+        let newContainer = try ModelContainer(
+            Version0_0_3.self,
+            migration: MigrationPlan.self,
+            connection: container.getConnection(),
+            appID: "de.amethystsoft.vein.tests.OtherMigrationTests",
+            encryptionEnabled: false
+        )
+
+        do {
+            try newContainer.migrate()
+            Issue.record("Unexpectedly no error was thrown")
+        } catch let error as ManagedObjectContextError {
+            if case .inactiveModelType = error { return }
+            throw error
+        }
+    }
 }
 
 fileprivate enum Version0_0_1: VersionedSchema {
@@ -173,15 +205,34 @@ fileprivate enum Version0_0_2: VersionedSchema {
     }
 }
 
+fileprivate enum Version0_0_3: VersionedSchema {
+    static let version = ModelVersion(0, 0, 3)
+
+    static var models: [any Vein.PersistentModel.Type] {[
+        BasicModel.self
+    ]}
+
+    @Model
+    final class BasicModel {
+        var field: String
+        var field1: String?
+
+        init(field: String) {
+            self.field = field
+        }
+    }
+}
+
 fileprivate enum MigrationPlan: SchemaMigrationPlan {
     static var schemas: [any Vein.VersionedSchema.Type] {
         [
             Version0_0_1.self,
-            Version0_0_2.self
+            Version0_0_2.self,
+            Version0_0_3.self
         ]
     }
 
-    static var stages: [Vein.MigrationStage] { [v1ToV2] }
+    static var stages: [Vein.MigrationStage] { [v1ToV2, v2ToV3] }
 
     static let v1ToV2 = Vein.MigrationStage.complex(
         fromVersion: Version0_0_1.self,
@@ -198,5 +249,18 @@ fileprivate enum MigrationPlan: SchemaMigrationPlan {
                 model.field = "didMigrate was called"
             }
         }
+    )
+
+    static let v2ToV3 = Vein.MigrationStage.complex(
+        fromVersion: Version0_0_2.self,
+        toVersion: Version0_0_3.self,
+        willMigrate: { context in
+            try Version0_0_2.BasicModel.unchangedMigration(
+                to: Version0_0_3.BasicModel.self,
+                on: context
+            )
+            try context.insert(Version0_0_1.BasicModel(field: "test"))
+        },
+        didMigrate: nil
     )
 }
