@@ -116,7 +116,7 @@
                 return fetchedCount == expectedCount
             }
         }
-        
+
         func testModelPredicateAllMatchesEverything() {
             property("ModelPredicate.all matches everything") <- forAll { (tests: [Test]) in
                 let container = try ModelContainer(
@@ -126,14 +126,14 @@
                     appID: "de.amethystsoft.vein.tests.SwiftCheck",
                     encryptionEnabled: false
                 )
-                
+
                 let context = container.context!
-                
+
                 try tests.forEach { try context.insert($0) }
                 try context.save()
 
                 let fetchedCount = try context.fetchAll(ModelPredicate<V0_0_1.Test>.all).count
-                
+
                 return fetchedCount == tests.count
             }
         }

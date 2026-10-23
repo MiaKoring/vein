@@ -65,7 +65,7 @@ struct FieldBehaviorTests {
         model.text = "b"
         #expect(model._updatedAt == nil)
     }
-    
+
     @Test
     func `read doesn't update updatedAt`() async throws {
         let container = try ModelContainer(
@@ -75,16 +75,16 @@ struct FieldBehaviorTests {
             appID: "de.amethystsoft.vein.tests.FieldBehaviorTests",
             encryptionEnabled: ProcessInfo.shouldEnableEncryption
         )
-        
+
         let model = V0_0_1.Test(someValue: "")
         try container.context.insert(model)
-        
+
         model.someValue = "a"
         let updatedAt = model._updatedAt
         #expect(updatedAt != nil)
-        
+
         try await Task.sleep(for: .milliseconds(100))
-        
+
         _ = model.someValue
         #expect(updatedAt == model._updatedAt)
     }

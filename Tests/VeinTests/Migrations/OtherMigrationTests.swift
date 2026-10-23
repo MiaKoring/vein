@@ -135,7 +135,7 @@ struct OtherMigrationTests {
             throw error
         }
     }
-    
+
     @Test
     @MainActor
     func `insert of unpermitted model during migration throws`() async throws {
@@ -146,11 +146,11 @@ struct OtherMigrationTests {
             appID: "de.amethystsoft.vein.tests.OtherMigrationTests",
             encryptionEnabled: false
         )
-        
+
         let model = Version0_0_2.BasicModel(field: "lol")
         try container.context.insert(model)
         try container.context.save()
-        
+
         let newContainer = try ModelContainer(
             Version0_0_3.self,
             migration: MigrationPlan.self,
@@ -158,7 +158,7 @@ struct OtherMigrationTests {
             appID: "de.amethystsoft.vein.tests.OtherMigrationTests",
             encryptionEnabled: false
         )
-            
+
         do {
             try newContainer.migrate()
             Issue.record("Unexpectedly no error was thrown")
@@ -207,22 +207,21 @@ fileprivate enum Version0_0_2: VersionedSchema {
 
 fileprivate enum Version0_0_3: VersionedSchema {
     static let version = ModelVersion(0, 0, 3)
-    
+
     static var models: [any Vein.PersistentModel.Type] {[
         BasicModel.self
     ]}
-    
+
     @Model
     final class BasicModel {
         var field: String
         var field1: String?
-        
+
         init(field: String) {
             self.field = field
         }
     }
 }
-
 
 fileprivate enum MigrationPlan: SchemaMigrationPlan {
     static var schemas: [any Vein.VersionedSchema.Type] {
@@ -232,9 +231,9 @@ fileprivate enum MigrationPlan: SchemaMigrationPlan {
             Version0_0_3.self
         ]
     }
-    
+
     static var stages: [Vein.MigrationStage] { [v1ToV2, v2ToV3] }
-    
+
     static let v1ToV2 = Vein.MigrationStage.complex(
         fromVersion: Version0_0_1.self,
         toVersion: Version0_0_2.self,
@@ -251,7 +250,7 @@ fileprivate enum MigrationPlan: SchemaMigrationPlan {
             }
         }
     )
-    
+
     static let v2ToV3 = Vein.MigrationStage.complex(
         fromVersion: Version0_0_2.self,
         toVersion: Version0_0_3.self,

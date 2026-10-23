@@ -159,7 +159,7 @@ struct ModelContainerTests {
 
         #expect(container.logConfiguration == config)
     }
-    
+
     @Test
     func `Client ID is the same for 2 containers pointing to the same db`() async throws {
         let container = try ModelContainer(
@@ -169,7 +169,7 @@ struct ModelContainerTests {
             appID: "de.amethystsoft.vein.ModelContainerTests",
             encryptionEnabled: false
         )
-        
+
         let container2 = try ModelContainer(
             V0_0_1.self,
             migration: Migration.self,
@@ -177,7 +177,7 @@ struct ModelContainerTests {
             appID: "de.amethystsoft.vein.ModelContainerTests",
             encryptionEnabled: false
         )
-        
+
         #expect(container.context.clientID == container2.context.clientID)
     }
 }
