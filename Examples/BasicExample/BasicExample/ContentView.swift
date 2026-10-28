@@ -12,15 +12,19 @@
 
 import SwiftUI
 import VeinSwiftUI
+import SwiftData
 
 struct ContentView: View {
-    @Query
+    @VeinSwiftUI.Query
     var testItems: [Test]
     @State var stop = false
-    @Environment(\.modelContext) var context
+    @Environment(\.veinContext) var context
 
     init(predicate: Predicate<Test> = #Predicate<Test> { _ in true }) {
-        self._testItems = Query<Test>(predicate, sortBy: [SortRule<Test>(\.randomValue)])
+        self._testItems = VeinSwiftUI.Query<Test>(
+            predicate,
+            sortBy: [SortRule<Test>(\.randomValue)]
+        )
     }
 
     var body: some View {
@@ -94,7 +98,7 @@ struct ObservedTextField: View {
 
 struct TestModelDisplay: View {
     @ObservedObject var item: Test
-    @Environment(\.modelContext) var context
+    @Environment(\.veinContext) var context
     var body: some View {
         VStack {
             HStack {
